@@ -49,7 +49,8 @@ window.POSTI = [
       { nome: "Marzamemi",               lat: 36.7400, lng: 15.1170 },
       { nome: "Noto",                    lat: 36.8910, lng: 15.0690 },
       { nome: "Punta Secca",             lat: 36.7880, lng: 14.4930 },
-      { nome: "Castello di Donnafugata", lat: 36.8817, lng: 14.5636 }
+      { nome: "Castello di Donnafugata", lat: 36.8817, lng: 14.5636 },
+      { nome: "Scicli",                  lat: 36.78831, lng: 14.69883 }
     ]
   }
 ];
