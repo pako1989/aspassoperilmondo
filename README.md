@@ -44,4 +44,4 @@ quindi chi lo trova può vedere quelle foto.
 ## Com'è fatta
 Pagina statica (HTML, CSS, JavaScript) con [Leaflet](https://leafletjs.com) e mappe [OpenStreetMap](https://www.openstreetmap.org).
 È una PWA: `manifest.webmanifest` la rende installabile e `sw.js` la fa funzionare anche offline.
-Quando modifichi i file, aumenta il numero in `versione.js`: compare in basso a sinistra nell'app e fa scaricare subito la versione nuova ai telefoni. Il tasto ⟳ in alto forza l'aggiornamento.
+Quando modifichi i file, aumenta il numero in `versione.js` e i `?v=` in `index.html`: compare in basso a sinistra nell'app e fa scaricare subito la versione nuova ai telefoni. Il tasto ⟳ in alto forza l'aggiornamento.

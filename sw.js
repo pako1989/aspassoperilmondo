@@ -44,6 +44,6 @@ self.addEventListener("fetch", (e) => {
         }
         return risposta;
       })
-      .catch(() => caches.match(e.request))
+      .catch(() => caches.match(e.request, { ignoreSearch: true }))
   );
 });
