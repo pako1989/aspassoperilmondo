@@ -200,4 +200,19 @@
   if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("sw.js");
   }
+
+  $("versione").textContent = window.VERSIONE || "";
+
+  // Tasto ⟳: butta via le copie salvate e ricarica tutto dal sito
+  $("btn-aggiorna").addEventListener("click", async () => {
+    $("btn-aggiorna").classList.add("gira");
+    try {
+      const chiavi = await caches.keys();
+      await Promise.all(chiavi.map((k) => caches.delete(k)));
+      const reg = await navigator.serviceWorker?.getRegistration();
+      if (reg) await reg.update();
+    } finally {
+      location.reload();
+    }
+  });
 })();

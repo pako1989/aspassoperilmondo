@@ -1,12 +1,14 @@
 // Fa funzionare l'app anche senza connessione (dopo la prima apertura).
-// Cambia il numero di versione quando modifichi i file, così i telefoni scaricano la versione nuova.
-const VERSIONE = "v5";
+// Il numero di versione si cambia in versione.js.
+importScripts("versione.js");
+const VERSIONE = self.VERSIONE;
 const FILE = [
   "./",
   "index.html",
   "style.css",
   "app.js",
   "posti.js",
+  "versione.js",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",

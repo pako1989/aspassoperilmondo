@@ -24,10 +24,15 @@
 <body>
   <header class="barra">
     <h1>A spasso per il mondo</h1>
-    <button id="btn-elenco" class="btn-tondo" aria-label="Elenco dei posti">☰</button>
+    <div class="azioni">
+      <button id="btn-aggiorna" class="btn-tondo" aria-label="Aggiorna l'app">⟳</button>
+      <button id="btn-elenco" class="btn-tondo" aria-label="Elenco dei posti">☰</button>
+    </div>
   </header>
 
   <div id="mappa"></div>
+
+  <div id="versione"></div>
 
   <!-- Elenco dei posti -->
   <aside id="elenco" class="pannello" hidden>
@@ -68,6 +73,7 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="versione.js"></script>
   <script src="posti.js"></script>
   <script src="app.js"></script>
 </body>
