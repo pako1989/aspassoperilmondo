@@ -179,6 +179,40 @@ iframe.spotify { height: 152px; }
 iframe.youtube { aspect-ratio: 16 / 9; }
 audio { width: 100%; }
 
+.btn-primario, .btn-secondario {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn-primario { flex: 1; background: linear-gradient(135deg, var(--blu), var(--tramonto)); color: #fff; }
+.btn-primario:disabled { opacity: 0.45; cursor: default; }
+.btn-secondario { background: rgba(127, 127, 127, 0.15); color: var(--testo); }
+#btn-aggiungi-tappa { width: 100%; margin-top: 10px; }
+.stretto { flex: none; }
+.riga { display: flex; gap: 8px; margin: 10px 0; }
+.pannello input {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--testo);
+  font-size: 16px; /* evita lo zoom automatico su iPhone */
+}
+.riga input { flex: 1; }
+#ch-valore { margin: 10px 0; }
+#ch-salva { width: 100%; }
+.pannello.compatto { max-height: 50vh; }
+.errore { color: #d64545; margin: 4px 0 0; }
+.errore:empty { display: none; }
+.segnaposto-tappa.nuova { background: var(--blu); }
+.tappe li.vuoto { padding-left: 4px; cursor: default; }
+.tappe li.vuoto::before { display: none; }
+
 #visore {
   position: fixed;
   inset: 0;

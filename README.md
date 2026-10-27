@@ -22,6 +22,19 @@ Link: **https://pako1989.github.io/aspassoperilmondo/**
 Tutto si trova in [`posti.js`](posti.js): nome, emoji, coordinate, data, nota, foto e musica.
 Si può modificare anche direttamente da GitHub (icona della matita ✏️).
 
+### Tappe dall'app
+Nella scheda di un posto tocca **+ Aggiungi tappa**: scrivi il nome e tocca 🔍 (o tocca il punto sulla mappa), poi **Salva tappa**.
+Le tappe aggiunte così finiscono in [`tappe-aggiunte.json`](tappe-aggiunte.json) e chi apre l'app le vede subito.
+
+La prima volta su ogni telefono l'app chiede un **codice d'accesso GitHub** (si crea una volta sola):
+1. Da GitHub: foto profilo → **Settings** → **Developer settings** → **Personal access tokens** → **Fine-grained tokens** → **Generate new token**.
+2. Nome: `mappa`, scadenza a piacere (anche "No expiration").
+3. **Repository access**: *Only select repositories* → `aspassoperilmondo`.
+4. **Permissions** → *Repository permissions* → **Contents: Read and write**.
+5. **Generate token**, copialo e incollalo nell'app. Lo stesso codice va bene su entrambi i telefoni.
+
+Il codice resta salvato solo sul telefono. Non condividerlo con altri: permette di modificare il repo.
+
 ### Musica
 Per ogni posto, una di queste:
 ```js
