@@ -19,7 +19,7 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=8">
 </head>
 <body>
   <header class="barra">
@@ -56,6 +56,7 @@
     <div id="scheda-tappe-box">
       <h3>📍 Tappe</h3>
       <ul id="scheda-tappe" class="tappe"></ul>
+      <button id="btn-aggiungi-tappa" class="btn-secondario">+ Aggiungi tappa</button>
     </div>
 
     <h3>📷 Foto</h3>
@@ -63,6 +64,35 @@
 
     <h3>🎵 La nostra canzone</h3>
     <div id="scheda-musica"></div>
+  </section>
+
+  <!-- Nuova tappa -->
+  <section id="nuova-tappa" class="pannello compatto" hidden>
+    <div class="pannello-testa">
+      <h2 id="nt-titolo">Nuova tappa</h2>
+    </div>
+    <div class="riga">
+      <input id="nt-nome" type="text" placeholder="Nome (es. Scicli)" autocomplete="off">
+      <button id="nt-cerca" class="btn-secondario stretto" aria-label="Cerca">🔍</button>
+    </div>
+    <p id="nt-stato" class="data"></p>
+    <input id="nt-nota" type="text" placeholder="Nota (facoltativa)" autocomplete="off">
+    <p id="nt-errore" class="errore"></p>
+    <div class="riga">
+      <button id="nt-annulla" class="btn-secondario">Annulla</button>
+      <button id="nt-salva" class="btn-primario" disabled>Salva tappa</button>
+    </div>
+  </section>
+
+  <!-- Codice d'accesso per salvare -->
+  <section id="chiave" class="pannello compatto" hidden>
+    <div class="pannello-testa">
+      <h2>🔑 Codice d'accesso</h2>
+      <button class="btn-chiudi" data-chiudi="chiave" aria-label="Chiudi">✕</button>
+    </div>
+    <p class="data">Serve solo la prima volta su questo telefono, per poter salvare.</p>
+    <input id="ch-valore" type="password" placeholder="github_pat_…" autocomplete="off">
+    <button id="ch-salva" class="btn-primario">Salva e continua</button>
   </section>
 
   <!-- Foto a schermo intero -->
@@ -73,9 +103,9 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <!-- ?v=6 deve essere uguale al numero in versione.js: così il telefono scarica sempre i file nuovi -->
-  <script src="versione.js?v=6"></script>
-  <script src="posti.js?v=6"></script>
-  <script src="app.js?v=6"></script>
+  <!-- ?v=8 deve essere uguale al numero in versione.js: così il telefono scarica sempre i file nuovi -->
+  <script src="versione.js?v=8"></script>
+  <script src="posti.js?v=8"></script>
+  <script src="app.js?v=8"></script>
 </body>
 </html>
