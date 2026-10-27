@@ -30,7 +30,11 @@
  */
 window.POSTI = [
   { nome: "Ostuni",           emoji: "🤍", lat: 40.7290, lng: 17.5770, data: "", nota: "", album: "", foto: [], musica: null },
-  { nome: "Porto Empedocle",  emoji: "🌙", lat: 37.2925, lng: 13.5260, data: "", nota: "", album: "", foto: [], musica: null },
+  { nome: "Porto Empedocle",  emoji: "🌙", lat: 37.2925, lng: 13.5260, data: "", nota: "", album: "", foto: [], musica: null,
+    tappe: [
+      { nome: "Agrigento", lat: 37.3111, lng: 13.5765 }
+    ]
+  },
   { nome: "Peschici",         emoji: "🔐", lat: 41.9450, lng: 16.0170, data: "", nota: "", album: "", foto: [], musica: { youtube: "https://www.youtube.com/watch?v=6jWsIpAbo-8" } },
   { nome: "Crecchio",         emoji: "🏰", lat: 42.2970, lng: 14.3270, data: "", nota: "", album: "", foto: [], musica: null },
   { nome: "Gradara",          emoji: "❤️", lat: 43.9390, lng: 12.7700, data: "", nota: "", album: "", foto: [], musica: null },
