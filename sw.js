@@ -1,12 +1,14 @@
 // Fa funzionare l'app anche senza connessione (dopo la prima apertura).
-// Cambia il numero di versione quando modifichi i file, così i telefoni scaricano la versione nuova.
-const VERSIONE = "v4";
+// Il numero di versione si cambia in versione.js.
+importScripts("versione.js");
+const VERSIONE = self.VERSIONE;
 const FILE = [
   "./",
   "index.html",
   "style.css",
   "app.js",
   "posti.js",
+  "versione.js",
   "manifest.webmanifest",
   "icons/icon-192.png",
   "icons/icon-512.png",
@@ -14,7 +16,7 @@ const FILE = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSIONE).then((c) => c.addAll(FILE)));
+  e.waitUntil(caches.open(VERSIONE).then((c) => c.addAll(FILE.map((f) => new Request(f, { cache: "reload" })))));
   self.skipWaiting();
 });
 
@@ -30,8 +32,11 @@ self.addEventListener("activate", (e) => {
 // Prima la rete (così vedi sempre i posti aggiornati), poi la copia salvata se sei offline.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  // Per i nostri file salta la cache del browser (GitHub Pages la tiene 10 minuti),
+  // così dopo una modifica il telefono vede subito tutto aggiornato.
+  const nostro = new URL(e.request.url).origin === self.location.origin;
   e.respondWith(
-    fetch(e.request)
+    (nostro ? fetch(e.request.url, { cache: "no-cache" }) : fetch(e.request))
       .then((risposta) => {
         if (risposta.ok && (risposta.type === "basic" || risposta.type === "cors")) {
           const copia = risposta.clone();
