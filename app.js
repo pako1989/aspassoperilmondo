@@ -88,7 +88,17 @@
         img.addEventListener("click", () => apriVisore(src));
         galleria.appendChild(img);
       });
-    } else {
+    }
+    if (p.album) {
+      const link = document.createElement("a");
+      link.className = "btn-album";
+      link.href = p.album;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "Apri l'album delle foto 📷";
+      galleria.appendChild(link);
+    }
+    if (!galleria.children.length) {
       galleria.innerHTML = '<p class="vuoto">Nessuna foto ancora. Le aggiungeremo presto 💛</p>';
     }
 

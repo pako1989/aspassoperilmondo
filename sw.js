@@ -1,6 +1,6 @@
 // Fa funzionare l'app anche senza connessione (dopo la prima apertura).
 // Cambia il numero di versione quando modifichi i file, così i telefoni scaricano la versione nuova.
-const VERSIONE = "v1";
+const VERSIONE = "v2";
 const FILE = [
   "./",
   "index.html",

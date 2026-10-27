@@ -31,10 +31,15 @@ musica: { file: "musica/ostuni.mp3", titolo: "Nome canzone" }
 ```
 
 ### Foto
+Le foto restano in un album condiviso (Google Foto, iCloud, ecc.), non nel repo.
+Crea un album per il posto, copia il link di condivisione e incollalo così:
 ```js
-foto: ["foto/ostuni/1.jpg", "foto/ostuni/2.jpg"]
+album: "https://photos.app.goo.gl/..."
 ```
-⚠️ Il repo è **pubblico**: tutto ciò che si carica qui è visibile a chiunque.
+Nella scheda del posto compare il tasto **Apri l'album delle foto**.
+
+⚠️ Il repo è **pubblico**: non caricare qui foto private. Il link dell'album è visibile a chi apre il repo,
+quindi chi lo trova può vedere quelle foto.
 
 ## Com'è fatta
 Pagina statica (HTML, CSS, JavaScript) con [Leaflet](https://leafletjs.com) e mappe [OpenStreetMap](https://www.openstreetmap.org).
