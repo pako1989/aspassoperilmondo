@@ -67,6 +67,12 @@ html, body {
   transition: transform 0.15s;
 }
 .segnaposto:hover { transform: scale(1.15); }
+.segnaposto-tappa {
+  background: var(--tramonto);
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
 
 /* Pannelli: su telefono salgono dal basso, su schermo grande stanno a lato */
 .pannello {
@@ -120,6 +126,23 @@ html, body {
   border-bottom: 1px solid rgba(127, 127, 127, 0.15);
   cursor: pointer;
   font-size: 1.05rem;
+}
+#lista-posti small,
+.tappe small { display: block; font-size: 0.8rem; color: var(--tenue); margin-top: 2px; }
+.tappe { list-style: none; margin: 0; padding: 0; }
+.tappe li {
+  position: relative;
+  padding: 10px 4px 10px 26px;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.15);
+  cursor: pointer;
+}
+.tappe li::before {
+  content: "";
+  position: absolute;
+  left: 6px; top: 15px;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--tramonto);
 }
 #lista-posti .emoji { font-size: 1.4rem; width: 32px; text-align: center; }
 
