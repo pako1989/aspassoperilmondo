@@ -24,6 +24,26 @@
       .on("click", () => apriScheda(i));
   });
 
+  // Tappe: puntini piccoli, visibili solo quando la mappa è abbastanza vicina
+  const ZOOM_TAPPE = 8;
+  const livelloTappe = L.layerGroup();
+  const segnapostiTappe = posti.map((posto, i) =>
+    (posto.tappe || []).map((t) =>
+      L.marker([t.lat, t.lng], {
+        icon: L.divIcon({ className: "segnaposto-tappa", iconSize: [16, 16], iconAnchor: [8, 8] }),
+        title: t.nome
+      })
+        .bindTooltip(t.nome, { direction: "top", offset: [0, -8] })
+        .on("click", () => apriScheda(i))
+        .addTo(livelloTappe)
+    )
+  );
+  function aggiornaTappe() {
+    if (mappa.getZoom() >= ZOOM_TAPPE) livelloTappe.addTo(mappa);
+    else livelloTappe.remove();
+  }
+  mappa.on("zoomend", aggiornaTappe);
+
   // All'apertura inquadra il gruppo principale di posti; quelli molto lontani
   // (es. Siviglia) si raggiungono dall'elenco, così su telefono le icone non si sovrappongono.
   function inquadraTutti() {
@@ -37,6 +57,7 @@
     });
   }
   inquadraTutti();
+  aggiornaTappe();
 
   // --- Pannelli ------------------------------------------------------------
   function apri(id) { $(id).hidden = false; }
@@ -56,7 +77,9 @@
     .sort((a, b) => a.p.nome.localeCompare(b.p.nome, "it"))
     .forEach(({ p, i }) => {
       const li = document.createElement("li");
-      li.innerHTML = `<span class="emoji">${p.emoji || "📍"}</span><span>${testo(p.nome)}</span>`;
+      const altre = (p.tappe || []).map((t) => testo(t.nome)).join(" · ");
+      li.innerHTML = `<span class="emoji">${p.emoji || "📍"}</span>
+        <span>${testo(p.nome)}${altre ? `<small>${altre}</small>` : ""}</span>`;
       li.addEventListener("click", () => {
         chiudi("elenco");
         apriScheda(i, true);
@@ -102,11 +125,34 @@
       galleria.innerHTML = '<p class="vuoto">Nessuna foto ancora. Le aggiungeremo presto 💛</p>';
     }
 
+    const tappe = p.tappe || [];
+    const listaTappe = $("scheda-tappe");
+    listaTappe.innerHTML = "";
+    tappe.forEach((t, k) => {
+      const li = document.createElement("li");
+      li.innerHTML = `<span>${testo(t.nome)}</span>${t.nota ? `<small>${testo(t.nota)}</small>` : ""}`;
+      li.addEventListener("click", () => {
+        chiudi("scheda");
+        mappa.flyTo([t.lat, t.lng], 13, { duration: 1.2 });
+        mappa.once("moveend", () => segnapostiTappe[i][k].openTooltip());
+      });
+      listaTappe.appendChild(li);
+    });
+    $("scheda-tappe-box").hidden = !tappe.length;
+
     $("scheda-musica").innerHTML = htmlMusica(p.musica);
     apri("scheda");
     $("scheda").scrollTop = 0;
 
-    if (vola) mappa.flyTo([p.lat, p.lng], 11, { duration: 1.2 });
+    if (vola) {
+      // con le tappe inquadra tutta la vacanza, altrimenti solo il posto
+      if (tappe.length) {
+        const zona = L.latLngBounds([[p.lat, p.lng], ...tappe.map((t) => [t.lat, t.lng])]);
+        mappa.flyToBounds(zona, { padding: [40, 40], duration: 1.2 });
+      } else {
+        mappa.flyTo([p.lat, p.lng], 11, { duration: 1.2 });
+      }
+    }
   }
 
   function htmlMusica(m) {
