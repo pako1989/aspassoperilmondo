@@ -49,6 +49,12 @@ Vanno nella cartella `media/` del repo e l'elenco sta in [`media-aggiunti.json`]
 Per cancellare: tocca una foto caricata dall'app (si apre come una cartolina, con le frecce o scorrendo col dito per vedere le altre) e poi **🗑 Elimina foto**, oppure **🗑 Elimina audio caricato** sotto il player (le foto messe a mano in `posti.js` non si cancellano dall'app).
 ⚠️ Il repo è **pubblico**: foto e audio caricati così sono visibili a chiunque abbia il link del repo.
 
+### Foto e audio di una tappa
+Nella scheda tocca una tappa (es. Marzamemi): sotto compaiono *Foto · Marzamemi*, *Canzone · Marzamemi* e *Giochi · Marzamemi*, e **+ Aggiungi foto** / **+ Carica audio** valgono per quella tappa. Il tasto 🗺 accanto alla tappa la mostra sulla mappa; ← torna alle foto del posto.
+
+### Aggiornamenti tra due telefoni
+Tappe, foto e audio sono salvati su GitHub: l'altro telefono li vede quando apre l'app o quando ci torna sopra (o col tasto ⟳). Il codice d'accesso serve solo per *aggiungere*, non per vedere.
+
 ### Giochi
 - **🧩 Puzzle**: parte con una foto del posto (3×3, 4×4 o 5×5), tocca due pezzi per scambiarli.
 - **🥁 Ritmo**: le note vengono ricavate dall'audio caricato (bassi a sinistra, acuti a destra): tocca la corsia quando la nota arriva sulla linea.

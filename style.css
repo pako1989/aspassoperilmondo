@@ -363,3 +363,21 @@ button.btn-secondario:disabled { opacity: 0.4; cursor: default; }
 }
 .btn-freccia.sx { left: 6px; }
 .btn-freccia.dx { right: 6px; }
+
+/* Tappa scelta nella scheda */
+.tappe li { padding-right: 52px; }
+.tappe li.scelta { background: rgba(240, 140, 110, 0.18); border-radius: 10px; font-weight: 700; }
+.tappe li.scelta::before { box-shadow: 0 0 0 4px rgba(240, 140, 110, 0.35); }
+.tappe .vai-mappa {
+  position: absolute;
+  right: 4px; top: 50%;
+  transform: translateY(-50%);
+  width: 40px; height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(127, 127, 127, 0.15);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+#btn-torna-posto { margin-top: 16px; }
+#titolo-foto { scroll-margin-top: 8px; }
