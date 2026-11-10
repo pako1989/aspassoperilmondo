@@ -127,8 +127,7 @@
       <label class="spunta"><input id="v-pagato" type="checkbox" ${p.pagato ? "checked" : ""}> Già pagato</label>
       <label>Da pagare entro<input id="v-scadenza" type="date" value="${t(p.scadenza || "")}"></label>
       <label>Link (Booking, ecc.)<input id="v-link" type="url" placeholder="https://…" value="${t(p.link || "")}"></label>
-      <label>Note<input id="v-note" type="text" placeholder="es. colazione inclusa" value="${t(p.note || "")}" autocomplete="off"></label>
-      <p class="data">⚠️ Il repo è pubblico: non scrivere codici di prenotazione, password o dati personali.</p>`;
+      <label>Note<input id="v-note" type="text" placeholder="es. colazione inclusa" value="${t(p.note || "")}" autocomplete="off"></label>`;
     corpo.appendChild(f);
     if (p.link) {
       const a = el("a", "btn-secondario largo", "Apri il link ↗");
