@@ -109,19 +109,18 @@
     $("scheda-nome").textContent = p.nome;
     $("scheda-data").textContent = p.data || "";
     $("scheda-nota").textContent = p.nota || "";
+    $("media-stato").textContent = "";
 
     const galleria = $("scheda-foto");
     galleria.innerHTML = "";
-    if (p.foto && p.foto.length) {
-      p.foto.forEach((src) => {
-        const img = document.createElement("img");
-        img.src = src;
-        img.loading = "lazy";
-        img.alt = p.nome;
-        img.addEventListener("click", () => apriVisore(src));
-        galleria.appendChild(img);
-      });
-    }
+    tutteFoto(p).forEach((src) => {
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.alt = p.nome;
+      conFallback(img, src);
+      img.addEventListener("click", () => apriVisore(img.src));
+      galleria.appendChild(img);
+    });
     if (p.album) {
       const link = document.createElement("a");
       link.className = "btn-album";
@@ -152,6 +151,20 @@
     postoAperto = i;
 
     $("scheda-musica").innerHTML = htmlMusica(p.musica);
+    if (p.audioAggiunto) {
+      const blocco = document.createElement("div");
+      blocco.innerHTML = `${p.audioAggiunto.titolo ? `<p>${testo(p.audioAggiunto.titolo)}</p>` : ""}<audio controls preload="none"></audio>`;
+      conFallback(blocco.querySelector("audio"), p.audioAggiunto.file);
+      $("scheda-musica").appendChild(blocco);
+    }
+    const fileAudio = audioDi(p);
+    $("btn-puzzle").disabled = !tutteFoto(p).length;
+    $("btn-ritmo").disabled = !fileAudio;
+    $("giochi-info").textContent =
+      !tutteFoto(p).length && !fileAudio ? "Carica una foto per il puzzle e un audio per il ritmo."
+      : !tutteFoto(p).length ? "Carica una foto per giocare al puzzle."
+      : !fileAudio ? "Carica un file audio per giocare al ritmo."
+      : "";
     apri("scheda");
     $("scheda").scrollTop = 0;
 
@@ -205,7 +218,8 @@
   // e unite a quelle di posti.js all'apertura.
   const REPO = "pako1989/aspassoperilmondo";
   const FILE_AGGIUNTE = "tappe-aggiunte.json";
-  const API = `https://api.github.com/repos/${REPO}/contents/${FILE_AGGIUNTE}`;
+  const FILE_MEDIA = "media-aggiunti.json";
+  const api = (file) => `https://api.github.com/repos/${REPO}/contents/${file}`;
 
   function leggiChiave() {
     try { return localStorage.getItem("chiave-github") || ""; } catch (e) { return ""; }
@@ -219,8 +233,8 @@
   const daBase64 = (s) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\n/g, "")), (c) => c.charCodeAt(0)));
   const inBase64 = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
 
-  async function scaricaAggiunte() {
-    const r = await fetch(`${API}?ref=main&t=${Date.now()}`, { headers: intestazioni(), cache: "no-store" });
+  async function scaricaAggiunte(file = FILE_AGGIUNTE) {
+    const r = await fetch(`${api(file)}?ref=main&t=${Date.now()}`, { headers: intestazioni(), cache: "no-store" });
     if (r.status === 404) return { dati: {}, sha: null };
     if (!r.ok) throw new Error(`GitHub ha risposto ${r.status}`);
     const j = await r.json();
@@ -248,7 +262,7 @@
     for (let tentativo = 0; tentativo < 2; tentativo++) {
       const { dati, sha } = await scaricaAggiunte();
       dati[nomePosto] = (dati[nomePosto] || []).concat(tappa);
-      const r = await fetch(API, {
+      const r = await fetch(api(FILE_AGGIUNTE), {
         method: "PUT",
         headers: { ...intestazioni(), "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -336,6 +350,7 @@
 
   $("nt-salva").addEventListener("click", async () => {
     if (!leggiChiave()) {
+      dopoChiave = () => $("nt-salva").click();
       apri("chiave");
       return;
     }
@@ -368,11 +383,194 @@
   });
 
   // Codice d'accesso GitHub, salvato solo su questo telefono
+  let dopoChiave = null;
   $("ch-salva").addEventListener("click", () => {
     try { localStorage.setItem("chiave-github", $("ch-valore").value.trim()); } catch (e) {}
     $("ch-valore").value = "";
     chiudi("chiave");
-    $("nt-salva").click();
+    const azione = dopoChiave;
+    dopoChiave = null;
+    if (azione) azione();
+  });
+
+
+  // --- Foto e audio caricati dall'app ---------------------------------------
+  // I file vanno su GitHub nella cartella media/ (il repo è pubblico: li può vedere chiunque
+  // abbia il link). L'elenco sta in media-aggiunti.json, unito a quello di posti.js all'apertura.
+  const RAW = `https://raw.githubusercontent.com/${REPO}/main/`;
+  const MAX_AUDIO = 25 * 1024 * 1024;
+
+  // Prima il file pubblicato sul sito; se non c'è ancora (Pages ci mette un minuto) prova GitHub
+  function conFallback(el, src) {
+    if (/^(https?:|data:|blob:)/.test(src)) { el.src = src; return; }
+    el.addEventListener("error", function riprova() {
+      el.removeEventListener("error", riprova);
+      el.src = RAW + src;
+    });
+    el.src = src;
+  }
+  const tutteFoto = (p) => (p.foto || []).concat(p.fotoAggiunte || []);
+  const audioDi = (p) => (p.audioAggiunto && p.audioAggiunto.file) || (p.musica && p.musica.file) || "";
+
+  function uniscMedia(dati) {
+    posti.forEach((p) => {
+      const m = dati[p.nome] || {};
+      p.fotoAggiunte = m.foto || [];
+      p.audioAggiunto = m.audio || null;
+    });
+    if (postoAperto !== null && !$("scheda").hidden) apriScheda(postoAperto);
+  }
+  scaricaAggiunte(FILE_MEDIA)
+    .then(({ dati }) => uniscMedia(dati))
+    .catch(() => {
+      fetch(FILE_MEDIA).then((r) => (r.ok ? r.json() : {})).then(uniscMedia).catch(() => {});
+    });
+
+  const slug = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "posto";
+  const estensione = (nome) => ((nome.match(/\.([a-z0-9]{2,4})$/i) || [])[1] || "mp3").toLowerCase();
+
+  function inBase64Blob(blob) {
+    return new Promise((ok, no) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result).split(",")[1]);
+      r.onerror = () => no(new Error("Non riesco a leggere il file"));
+      r.readAsDataURL(blob);
+    });
+  }
+
+  // Le foto del telefono pesano molto: le riduco a 1600 px prima di caricarle
+  async function ridimensiona(file) {
+    let img;
+    try {
+      img = await createImageBitmap(file, { imageOrientation: "from-image" });
+    } catch (e) {
+      img = await new Promise((ok, no) => {
+        const i = new Image();
+        i.onload = () => ok(i);
+        i.onerror = () => no(new Error("Questa foto non si apre"));
+        i.src = URL.createObjectURL(file);
+      });
+    }
+    const w = img.width || img.naturalWidth, h = img.height || img.naturalHeight;
+    const k = Math.min(1, 1600 / Math.max(w, h));
+    const c = document.createElement("canvas");
+    c.width = Math.round(w * k);
+    c.height = Math.round(h * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    return new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error("Foto non convertita"))), "image/jpeg", 0.82));
+  }
+
+  async function mettiFile(path, blob, messaggio) {
+    const r = await fetch(api(path), {
+      method: "PUT",
+      headers: { ...intestazioni(), "Content-Type": "application/json" },
+      body: JSON.stringify({ message: messaggio, content: await inBase64Blob(blob), branch: "main" })
+    });
+    if (r.status === 401 || r.status === 403) throw new Error("chiave");
+    if (!r.ok) throw new Error(`GitHub ha risposto ${r.status}`);
+  }
+
+  async function modificaMedia(messaggio, modifica) {
+    for (let tentativo = 0; tentativo < 3; tentativo++) {
+      const { dati, sha } = await scaricaAggiunte(FILE_MEDIA);
+      modifica(dati);
+      const r = await fetch(api(FILE_MEDIA), {
+        method: "PUT",
+        headers: { ...intestazioni(), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: messaggio,
+          content: inBase64(JSON.stringify(dati, null, 2) + "\n"),
+          branch: "main",
+          ...(sha ? { sha } : {})
+        })
+      });
+      if (r.ok) return dati;
+      if (r.status === 401 || r.status === 403) throw new Error("chiave");
+      if (r.status !== 409 && r.status !== 422) throw new Error(`GitHub ha risposto ${r.status}`);
+    }
+    throw new Error("Salvataggio non riuscito, riprova");
+  }
+
+  function erroreMedia(e) {
+    if (e.message === "chiave") {
+      $("media-stato").textContent = "Codice d'accesso non valido o scaduto: inseriscilo di nuovo.";
+      apri("chiave");
+    } else {
+      $("media-stato").textContent = "⚠️ " + e.message;
+    }
+  }
+
+  function conChiave(azione) {
+    if (!leggiChiave()) { dopoChiave = azione; apri("chiave"); return; }
+    azione();
+  }
+  $("btn-foto").addEventListener("click", () => conChiave(() => $("in-foto").click()));
+  $("btn-audio").addEventListener("click", () => conChiave(() => $("in-audio").click()));
+
+  $("in-foto").addEventListener("change", async (e) => {
+    const files = [...e.target.files];
+    e.target.value = "";
+    if (!files.length) return;
+    const p = posti[postoAperto];
+    const stato = $("media-stato");
+    const nuove = [];
+    try {
+      for (let k = 0; k < files.length; k++) {
+        stato.textContent = `Carico la foto ${k + 1} di ${files.length}…`;
+        const blob = await ridimensiona(files[k]);
+        const path = `media/${slug(p.nome)}/foto-${Date.now()}-${k}.jpg`;
+        await mettiFile(path, blob, `Foto: ${p.nome}`);
+        nuove.push(path);
+      }
+      stato.textContent = "Salvo…";
+      const dati = await modificaMedia(`Foto: ${p.nome}`, (d) => {
+        const m = (d[p.nome] = d[p.nome] || {});
+        m.foto = (m.foto || []).concat(nuove);
+      });
+      uniscMedia(dati);
+      stato.textContent = nuove.length > 1 ? "Foto caricate ✅" : "Foto caricata ✅";
+    } catch (err) {
+      erroreMedia(err);
+    }
+  });
+
+  $("in-audio").addEventListener("change", async (e) => {
+    const file = e.target.files[0];
+    e.target.value = "";
+    if (!file) return;
+    const p = posti[postoAperto];
+    const stato = $("media-stato");
+    if (file.size > MAX_AUDIO) {
+      stato.textContent = "⚠️ Il file pesa troppo (massimo 25 MB).";
+      return;
+    }
+    try {
+      stato.textContent = "Carico l'audio… (può volerci un po')";
+      const path = `media/${slug(p.nome)}/canzone-${Date.now()}.${estensione(file.name)}`;
+      await mettiFile(path, file, `Audio: ${p.nome}`);
+      stato.textContent = "Salvo…";
+      const titolo = file.name.replace(/\.[a-z0-9]{2,4}$/i, "");
+      const dati = await modificaMedia(`Audio: ${p.nome}`, (d) => {
+        const m = (d[p.nome] = d[p.nome] || {});
+        m.audio = { file: path, titolo };
+      });
+      uniscMedia(dati);
+      stato.textContent = "Audio caricato ✅";
+    } catch (err) {
+      erroreMedia(err);
+    }
+  });
+
+  // --- Giochi ----------------------------------------------------------------
+  $("btn-puzzle").addEventListener("click", () => {
+    const p = posti[postoAperto];
+    const lista = tutteFoto(p);
+    const src = lista[Math.floor(Math.random() * lista.length)];
+    window.GIOCHI.puzzle(src, p.nome, RAW);
+  });
+  $("btn-ritmo").addEventListener("click", () => {
+    const p = posti[postoAperto];
+    window.GIOCHI.ritmo(audioDi(p), (p.audioAggiunto && p.audioAggiunto.titolo) || (p.musica && p.musica.titolo) || p.nome, RAW);
   });
 
   // --- Foto a schermo intero ----------------------------------------------
