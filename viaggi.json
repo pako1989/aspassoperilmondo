@@ -1,5 +1,19 @@
 {
-  "prenotazioni": [],
+  "prenotazioni": [
+    {
+      "id": "mwb7s89v7bx",
+      "stato": "prenotato",
+      "tipo": "Hotel",
+      "nome": "I pagliai",
+      "dal": "2026-12-05",
+      "al": "2026-12-08",
+      "prezzo": 350,
+      "pagato": false,
+      "scadenza": "2026-11-20",
+      "link": "",
+      "note": "colazione inclusa"
+    }
+  ],
   "daVisitare": [
     {
       "id": "v01",
