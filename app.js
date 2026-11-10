@@ -102,45 +102,65 @@
 
   // --- Scheda del posto ----------------------------------------------------
   let postoAperto = null;
-  function apriScheda(i, vola) {
+  let tappaScelta = -1; // -1 = foto e canzone del posto, altrimenti la tappa scelta
+  let datiMedia = {};
+  const SEP = " › ";
+  const corrente = () => {
+    const p = posti[postoAperto];
+    return tappaScelta >= 0 && p.tappe && p.tappe[tappaScelta] ? p.tappe[tappaScelta] : p;
+  };
+
+  // Dà a ogni posto e a ogni tappa la sua chiave e le sue foto/audio caricati
+  function applicaMedia() {
+    posti.forEach((p) => {
+      p.chiave = p.nome;
+      const m = datiMedia[p.chiave] || {};
+      p.fotoAggiunte = m.foto || [];
+      p.audioAggiunto = m.audio || null;
+      (p.tappe || []).forEach((t) => {
+        t.chiave = p.nome + SEP + t.nome;
+        t.padre = p;
+        const mt = datiMedia[t.chiave] || {};
+        t.fotoAggiunte = mt.foto || [];
+        t.audioAggiunto = mt.audio || null;
+      });
+    });
+  }
+
+  // aggiorna = true: ridisegna la scheda già aperta senza tornare in cima e senza perdere la tappa scelta
+  function apriScheda(i, vola, aggiorna) {
     const p = posti[i];
+    if (!aggiorna || postoAperto !== i) tappaScelta = -1;
+    postoAperto = i;
+    applicaMedia();
+    const scorrimento = aggiorna ? $("scheda").scrollTop : 0;
+    const tappe = p.tappe || [];
+    if (tappaScelta >= tappe.length) tappaScelta = -1;
+    const b = corrente();
+    const scelta = b !== p;
+
     chiudi("elenco");
     $("scheda-emoji").textContent = p.emoji || "📍";
     $("scheda-nome").textContent = p.nome;
     $("scheda-data").textContent = p.data || "";
     $("scheda-nota").textContent = p.nota || "";
-    $("media-stato").textContent = "";
+    if (!aggiorna) $("media-stato").textContent = "";
 
-    const galleria = $("scheda-foto");
-    galleria.innerHTML = "";
-    tutteFoto(p).forEach((src) => {
-      const img = document.createElement("img");
-      img.loading = "lazy";
-      img.alt = p.nome;
-      conFallback(img, src);
-      img.addEventListener("click", () => apriVisore(p, [...galleria.querySelectorAll("img")].indexOf(img)));
-      galleria.appendChild(img);
-    });
-    if (p.album) {
-      const link = document.createElement("a");
-      link.className = "btn-album";
-      link.href = p.album;
-      link.target = "_blank";
-      link.rel = "noopener";
-      link.textContent = "Apri l'album delle foto 📷";
-      galleria.appendChild(link);
-    }
-    if (!galleria.children.length) {
-      galleria.innerHTML = '<p class="vuoto">Nessuna foto ancora. Le aggiungeremo presto 💛</p>';
-    }
-
-    const tappe = p.tappe || [];
+    // Tappe: tocca per scegliere (poi foto e audio sono di quella tappa), 🗺 per vederla sulla mappa
     const listaTappe = $("scheda-tappe");
     listaTappe.innerHTML = "";
     tappe.forEach((t, k) => {
       const li = document.createElement("li");
-      li.innerHTML = `<span>${testo(t.nome)}</span>${t.nota ? `<small>${testo(t.nota)}</small>` : ""}`;
+      if (k === tappaScelta) li.className = "scelta";
+      li.innerHTML = `<span>${testo(t.nome)}</span>${t.nota ? `<small>${testo(t.nota)}</small>` : ""}<button class="vai-mappa" aria-label="Vedi ${testo(t.nome)} sulla mappa">🗺</button>`;
       li.addEventListener("click", () => {
+        tappaScelta = tappaScelta === k ? -1 : k;
+        $("media-stato").textContent = "";
+        apriScheda(postoAperto, false, true);
+        if (tappaScelta >= 0) $("titolo-foto").scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      li.querySelector(".vai-mappa").addEventListener("click", (e) => {
+        e.stopPropagation();
         chiudi("scheda");
         mappa.flyTo([t.lat, t.lng], 13, { duration: 1.2 });
         mappa.once("moveend", () => segnapostiTappe[i][k].openTooltip());
@@ -148,28 +168,58 @@
       listaTappe.appendChild(li);
     });
     if (!tappe.length) listaTappe.innerHTML = '<li class="vuoto">Nessuna tappa ancora</li>';
-    postoAperto = i;
 
-    $("scheda-musica").innerHTML = htmlMusica(p.musica);
-    if (p.audioAggiunto) {
+    // Titoli con il nome di cosa stai guardando (il posto o la tappa scelta)
+    const nomeScelto = scelta ? ` · ${b.nome}` : "";
+    $("titolo-foto").textContent = "📷 Foto" + nomeScelto;
+    $("titolo-musica").textContent = "🎵 " + (scelta ? "Canzone" : "La nostra canzone") + nomeScelto;
+    $("titolo-giochi").textContent = "🎮 Giochi" + nomeScelto;
+    $("btn-torna-posto").hidden = !scelta;
+    $("btn-torna-posto").textContent = `← Foto e canzone di ${p.nome}`;
+
+    const galleria = $("scheda-foto");
+    galleria.innerHTML = "";
+    tutteFoto(b).forEach((src) => {
+      const img = document.createElement("img");
+      img.loading = "lazy";
+      img.alt = b.nome;
+      conFallback(img, src);
+      img.addEventListener("click", () => apriVisore(b, [...galleria.querySelectorAll("img")].indexOf(img)));
+      galleria.appendChild(img);
+    });
+    if (b.album) {
+      const link = document.createElement("a");
+      link.className = "btn-album";
+      link.href = b.album;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "Apri l'album delle foto 📷";
+      galleria.appendChild(link);
+    }
+    if (!galleria.children.length) {
+      galleria.innerHTML = `<p class="vuoto">Nessuna foto${scelta ? ` di ${testo(b.nome)}` : ""} ancora. Le aggiungeremo presto 💛</p>`;
+    }
+
+    $("scheda-musica").innerHTML = htmlMusica(b.musica);
+    if (b.audioAggiunto) {
       const blocco = document.createElement("div");
-      blocco.innerHTML = `${p.audioAggiunto.titolo ? `<p>${testo(p.audioAggiunto.titolo)}</p>` : ""}<audio controls preload="none"></audio><button class="btn-secondario largo" style="margin-top:8px">🗑 Elimina audio caricato</button>`;
-      conFallback(blocco.querySelector("audio"), p.audioAggiunto.file);
+      blocco.innerHTML = `${b.audioAggiunto.titolo ? `<p>${testo(b.audioAggiunto.titolo)}</p>` : ""}<audio controls preload="none"></audio><button class="btn-secondario largo" style="margin-top:8px">🗑 Elimina audio caricato</button>`;
+      conFallback(blocco.querySelector("audio"), b.audioAggiunto.file);
       blocco.querySelector("button").addEventListener("click", () => {
-        if (confirm("Eliminare questo audio?")) conChiave(() => elimina(p, "audio", p.audioAggiunto.file));
+        if (confirm("Eliminare questo audio?")) conChiave(() => elimina(b, "audio", b.audioAggiunto.file));
       });
       $("scheda-musica").appendChild(blocco);
     }
-    const fileAudio = audioDi(p);
-    $("btn-puzzle").disabled = !tutteFoto(p).length;
+    const fileAudio = audioDi(b);
+    $("btn-puzzle").disabled = !tutteFoto(b).length;
     $("btn-ritmo").disabled = !fileAudio;
     $("giochi-info").textContent =
-      !tutteFoto(p).length && !fileAudio ? "Carica una foto per il puzzle e un audio per il ritmo."
-      : !tutteFoto(p).length ? "Carica una foto per giocare al puzzle."
+      !tutteFoto(b).length && !fileAudio ? "Carica una foto per il puzzle e un audio per il ritmo."
+      : !tutteFoto(b).length ? "Carica una foto per giocare al puzzle."
       : !fileAudio ? "Carica un file audio per giocare al ritmo."
       : "";
     apri("scheda");
-    $("scheda").scrollTop = 0;
+    $("scheda").scrollTop = scorrimento;
 
     if (vola) {
       // con le tappe inquadra tutta la vacanza, altrimenti solo il posto
@@ -181,6 +231,11 @@
       }
     }
   }
+  $("btn-torna-posto").addEventListener("click", () => {
+    tappaScelta = -1;
+    $("media-stato").textContent = "";
+    apriScheda(postoAperto, false, true);
+  });
 
   function htmlMusica(m) {
     if (!m) return '<p class="vuoto">Nessuna canzone ancora 🎶</p>';
@@ -251,15 +306,18 @@
     });
     disegnaTappe();
     disegnaElenco();
-    if (postoAperto !== null && !$("scheda").hidden) apriScheda(postoAperto);
+    if (postoAperto !== null && !$("scheda").hidden) apriScheda(postoAperto, false, true);
   }
 
-  scaricaAggiunte()
-    .then(({ dati }) => uniscAggiunte(dati))
-    .catch(() => {
-      // senza GitHub (offline o troppe richieste) prova la copia pubblicata sul sito
-      fetch(FILE_AGGIUNTE).then((r) => (r.ok ? r.json() : {})).then(uniscAggiunte).catch(() => {});
-    });
+  function caricaTappe() {
+    scaricaAggiunte()
+      .then(({ dati }) => uniscAggiunte(dati))
+      .catch(() => {
+        // senza GitHub (offline o troppe richieste) prova la copia pubblicata sul sito
+        fetch(FILE_AGGIUNTE).then((r) => (r.ok ? r.json() : {})).then(uniscAggiunte).catch(() => {});
+      });
+  }
+  caricaTappe();
 
   async function salvaTappa(nomePosto, tappa) {
     for (let tentativo = 0; tentativo < 2; tentativo++) {
@@ -348,7 +406,7 @@
   }
   $("nt-annulla").addEventListener("click", () => {
     chiudiNuovaTappa();
-    apriScheda(postoAperto);
+    apriScheda(postoAperto, false, true);
   });
 
   $("nt-salva").addEventListener("click", async () => {
@@ -372,7 +430,7 @@
       const dati = await salvaTappa(p.nome, tappa);
       uniscAggiunte(dati);
       chiudiNuovaTappa();
-      apriScheda(postoAperto);
+      apriScheda(postoAperto, false, true);
     } catch (e) {
       $("nt-salva").disabled = false;
       $("nt-stato").textContent = "";
@@ -416,18 +474,27 @@
   const audioDi = (p) => (p.audioAggiunto && p.audioAggiunto.file) || (p.musica && p.musica.file) || "";
 
   function uniscMedia(dati) {
-    posti.forEach((p) => {
-      const m = dati[p.nome] || {};
-      p.fotoAggiunte = m.foto || [];
-      p.audioAggiunto = m.audio || null;
-    });
-    if (postoAperto !== null && !$("scheda").hidden) apriScheda(postoAperto);
+    datiMedia = dati;
+    applicaMedia();
+    if (postoAperto !== null && !$("scheda").hidden) apriScheda(postoAperto, false, true);
   }
-  scaricaAggiunte(FILE_MEDIA)
-    .then(({ dati }) => uniscMedia(dati))
-    .catch(() => {
-      fetch(FILE_MEDIA).then((r) => (r.ok ? r.json() : {})).then(uniscMedia).catch(() => {});
-    });
+  function caricaMedia() {
+    scaricaAggiunte(FILE_MEDIA)
+      .then(({ dati }) => uniscMedia(dati))
+      .catch(() => {
+        fetch(FILE_MEDIA).then((r) => (r.ok ? r.json() : {})).then(uniscMedia).catch(() => {});
+      });
+  }
+  caricaMedia();
+
+  // Quando riapri l'app (o torni su di lei) prende le novità che l'altro telefono ha salvato su GitHub
+  let ultimoAggiornamento = Date.now();
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden || Date.now() - ultimoAggiornamento < 20000) return;
+    ultimoAggiornamento = Date.now();
+    caricaTappe();
+    caricaMedia();
+  });
 
   const slug = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "posto";
   const estensione = (nome) => ((nome.match(/\.([a-z0-9]{2,4})$/i) || [])[1] || "mp3").toLowerCase();
@@ -526,8 +593,8 @@
     const stato = $("media-stato");
     stato.textContent = "Elimino…";
     try {
-      const dati = await modificaMedia(`Elimina ${tipo}: ${p.nome}`, (d) => {
-        const m = d[p.nome];
+      const dati = await modificaMedia(`Elimina ${tipo}: ${p.chiave}`, (d) => {
+        const m = d[p.chiave];
         if (!m) return;
         if (tipo === "foto") m.foto = (m.foto || []).filter((f) => f !== path);
         else if (m.audio && m.audio.file === path) delete m.audio;
@@ -547,20 +614,20 @@
     const files = [...e.target.files];
     e.target.value = "";
     if (!files.length) return;
-    const p = posti[postoAperto];
+    const p = corrente();
     const stato = $("media-stato");
     const nuove = [];
     try {
       for (let k = 0; k < files.length; k++) {
         stato.textContent = `Carico la foto ${k + 1} di ${files.length}…`;
         const blob = await ridimensiona(files[k]);
-        const path = `media/${slug(p.nome)}/foto-${Date.now()}-${k}.jpg`;
-        await mettiFile(path, blob, `Foto: ${p.nome}`);
+        const path = `media/${slug(p.chiave)}/foto-${Date.now()}-${k}.jpg`;
+        await mettiFile(path, blob, `Foto: ${p.chiave}`);
         nuove.push(path);
       }
       stato.textContent = "Salvo…";
-      const dati = await modificaMedia(`Foto: ${p.nome}`, (d) => {
-        const m = (d[p.nome] = d[p.nome] || {});
+      const dati = await modificaMedia(`Foto: ${p.chiave}`, (d) => {
+        const m = (d[p.chiave] = d[p.chiave] || {});
         m.foto = (m.foto || []).concat(nuove);
       });
       uniscMedia(dati);
@@ -574,7 +641,7 @@
     const file = e.target.files[0];
     e.target.value = "";
     if (!file) return;
-    const p = posti[postoAperto];
+    const p = corrente();
     const stato = $("media-stato");
     if (file.size > MAX_AUDIO) {
       stato.textContent = "⚠️ Il file pesa troppo (massimo 25 MB).";
@@ -582,12 +649,12 @@
     }
     try {
       stato.textContent = "Carico l'audio… (può volerci un po')";
-      const path = `media/${slug(p.nome)}/canzone-${Date.now()}.${estensione(file.name)}`;
-      await mettiFile(path, file, `Audio: ${p.nome}`);
+      const path = `media/${slug(p.chiave)}/canzone-${Date.now()}.${estensione(file.name)}`;
+      await mettiFile(path, file, `Audio: ${p.chiave}`);
       stato.textContent = "Salvo…";
       const titolo = file.name.replace(/\.[a-z0-9]{2,4}$/i, "");
-      const dati = await modificaMedia(`Audio: ${p.nome}`, (d) => {
-        const m = (d[p.nome] = d[p.nome] || {});
+      const dati = await modificaMedia(`Audio: ${p.chiave}`, (d) => {
+        const m = (d[p.chiave] = d[p.chiave] || {});
         m.audio = { file: path, titolo };
       });
       uniscMedia(dati);
@@ -599,13 +666,13 @@
 
   // --- Giochi ----------------------------------------------------------------
   $("btn-puzzle").addEventListener("click", () => {
-    const p = posti[postoAperto];
+    const p = corrente();
     const lista = tutteFoto(p);
     const src = lista[Math.floor(Math.random() * lista.length)];
     window.GIOCHI.puzzle(src, p.nome, RAW);
   });
   $("btn-ritmo").addEventListener("click", () => {
-    const p = posti[postoAperto];
+    const p = corrente();
     window.GIOCHI.ritmo(audioDi(p), (p.audioAggiunto && p.audioAggiunto.titolo) || (p.musica && p.musica.titolo) || p.nome, RAW);
   });
 
@@ -626,8 +693,8 @@
     void fig.offsetWidth;
     fig.classList.add("entra");
     $("cart-nome").textContent = p.nome;
-    $("cart-data").textContent = p.data || "";
-    $("cart-emoji").textContent = p.emoji || "📍";
+    $("cart-data").textContent = p.padre ? p.padre.nome : p.data || "";
+    $("cart-emoji").textContent = (p.padre || p).emoji || "📍";
     const caricata = (p.fotoAggiunte || []).includes(src);
     fotoVisore = caricata ? { posto: p, path: src } : null;
     $("visore-elimina").hidden = !fotoVisore;
