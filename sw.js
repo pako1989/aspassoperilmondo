@@ -8,6 +8,7 @@ const FILE = [
   "style.css",
   "app.js",
   "giochi.js",
+  "viaggi.js",
   "posti.js",
   "versione.js",
   "manifest.webmanifest",

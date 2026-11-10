@@ -97,6 +97,7 @@
   disegnaElenco();
   $("btn-elenco").addEventListener("click", () => {
     chiudi("scheda");
+    chiudi("viaggi");
     $("elenco").hidden ? apri("elenco") : chiudi("elenco");
   });
 
@@ -117,14 +118,21 @@
       const m = datiMedia[p.chiave] || {};
       p.fotoAggiunte = m.foto || [];
       p.audioAggiunto = m.audio || null;
+      applicaMusica(p, m);
       (p.tappe || []).forEach((t) => {
         t.chiave = p.nome + SEP + t.nome;
         t.padre = p;
         const mt = datiMedia[t.chiave] || {};
         t.fotoAggiunte = mt.foto || [];
         t.audioAggiunto = mt.audio || null;
+        applicaMusica(t, mt);
       });
     });
+  }
+  // musica: quella scritta in posti.js, a meno che dall'app sia stata cambiata (link) o tolta (false)
+  function applicaMusica(x, m) {
+    if (!("musicaBase" in x)) x.musicaBase = x.musica || null;
+    x.musica = m.musica === false ? null : m.musica || x.musicaBase;
   }
 
   // aggiorna = true: ridisegna la scheda già aperta senza tornare in cima e senza perdere la tappa scelta
@@ -201,6 +209,7 @@
     }
 
     $("scheda-musica").innerHTML = htmlMusica(b.musica);
+    $("scheda-musica").appendChild(comandiMusica(b));
     if (b.audioAggiunto) {
       const blocco = document.createElement("div");
       blocco.innerHTML = `${b.audioAggiunto.titolo ? `<p>${testo(b.audioAggiunto.titolo)}</p>` : ""}<audio controls preload="none"></audio><button class="btn-secondario largo" style="margin-top:8px">🗑 Elimina audio caricato</button>`;
@@ -236,6 +245,62 @@
     $("media-stato").textContent = "";
     apriScheda(postoAperto, false, true);
   });
+
+  // Cambia o toglie il link (YouTube o Spotify) della canzone
+  function comandiMusica(b) {
+    const box = document.createElement("div");
+    box.className = "comandi-musica";
+    const ha = !!(b.musica && (b.musica.youtube || b.musica.spotify));
+    const riga = document.createElement("div");
+    riga.className = "riga";
+    const cambia = document.createElement("button");
+    cambia.className = "btn-secondario largo";
+    cambia.textContent = ha ? "🔗 Cambia link" : "🔗 Aggiungi link YouTube o Spotify";
+    riga.appendChild(cambia);
+    if (b.musica) {
+      const togli = document.createElement("button");
+      togli.className = "btn-secondario largo";
+      togli.textContent = "🗑 Togli canzone";
+      togli.addEventListener("click", () => {
+        if (!confirm("Togliere la canzone di " + b.nome + "?")) return;
+        conChiave(() => salvaMusica(b, false));
+      });
+      riga.appendChild(togli);
+    }
+    box.appendChild(riga);
+    const form = document.createElement("div");
+    form.className = "riga";
+    form.hidden = true;
+    form.innerHTML = '<input type="url" placeholder="Incolla il link" autocomplete="off"><button class="btn-primario stretto">Salva</button>';
+    box.appendChild(form);
+    cambia.addEventListener("click", () => { form.hidden = !form.hidden; if (!form.hidden) form.querySelector("input").focus(); });
+    form.querySelector("button").addEventListener("click", () => {
+      const url = form.querySelector("input").value.trim();
+      let m = null;
+      try {
+        const u = new URL(url);
+        if (/(^|\.)(youtube\.com|youtu\.be)$/.test(u.hostname)) m = { youtube: url };
+        else if (u.hostname === "open.spotify.com") m = { spotify: url };
+      } catch (e) { /* link non valido */ }
+      if (!m) { $("media-stato").textContent = "⚠️ Il link deve essere di YouTube o di Spotify."; return; }
+      conChiave(() => salvaMusica(b, m));
+    });
+    return box;
+  }
+  async function salvaMusica(b, valore) {
+    const stato = $("media-stato");
+    stato.textContent = "Salvo…";
+    try {
+      const dati = await modificaMedia(`Canzone: ${b.chiave}`, (d) => {
+        const m = (d[b.chiave] = d[b.chiave] || {});
+        m.musica = valore;
+      });
+      uniscMedia(dati);
+      stato.textContent = valore ? "Canzone salvata ✅" : "Canzone tolta ✅";
+    } catch (err) {
+      erroreMedia(err);
+    }
+  }
 
   function htmlMusica(m) {
     if (!m) return '<p class="vuoto">Nessuna canzone ancora 🎶</p>';
@@ -494,6 +559,7 @@
     ultimoAggiornamento = Date.now();
     caricaTappe();
     caricaMedia();
+    if (window.VIAGGI) window.VIAGGI.ricarica();
   });
 
   const slug = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "posto";
@@ -540,11 +606,12 @@
     if (!r.ok) throw new Error(`GitHub ha risposto ${r.status}`);
   }
 
-  async function modificaMedia(messaggio, modifica) {
+  // Scarica un file JSON da GitHub, lo modifica e lo risalva (riprova se l'altro telefono ha salvato nel frattempo)
+  async function modificaJson(file, messaggio, modifica) {
     for (let tentativo = 0; tentativo < 3; tentativo++) {
-      const { dati, sha } = await scaricaAggiunte(FILE_MEDIA);
+      const { dati, sha } = await scaricaAggiunte(file);
       modifica(dati);
-      const r = await fetch(api(FILE_MEDIA), {
+      const r = await fetch(api(file), {
         method: "PUT",
         headers: { ...intestazioni(), "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -560,6 +627,7 @@
     }
     throw new Error("Salvataggio non riuscito, riprova");
   }
+  const modificaMedia = (messaggio, modifica) => modificaJson(FILE_MEDIA, messaggio, modifica);
 
   function erroreMedia(e) {
     if (e.message === "chiave") {
@@ -664,6 +732,9 @@
     }
   });
 
+  // Per viaggi.js
+  window.APP = { scaricaJson: scaricaAggiunte, modificaJson, conChiave, apri, chiudi, testo };
+
   // --- Giochi ----------------------------------------------------------------
   $("btn-puzzle").addEventListener("click", () => {
     const p = corrente();
@@ -711,6 +782,74 @@
     visoreIndice = (visoreIndice + passo + n) % n;
     mostraCartolina();
   }
+  // Disegna la cartolina su un'immagine e la manda con Condividi (o la scarica)
+  async function condividiCartolina() {
+    const p = visorePosto;
+    const foto = visore.querySelector("img");
+    const stato = $("visore-condividi");
+    stato.disabled = true;
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = foto.currentSrc || foto.src; });
+      const W = 1200, M = 56;
+      const fw = W - 2 * M;
+      const fh = Math.min(1100, Math.round((fw * img.naturalHeight) / img.naturalWidth));
+      const H = M + fh + 210;
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      const g = c.getContext("2d");
+      g.fillStyle = "#fffdf5";
+      g.fillRect(0, 0, W, H);
+      g.strokeStyle = "rgba(120,90,50,0.25)";
+      g.lineWidth = 3;
+      g.strokeRect(6, 6, W - 12, H - 12);
+      g.fillStyle = "#2a2420";
+      g.fillRect(M, M, fw, fh);
+      const k = Math.min(fw / img.naturalWidth, fh / img.naturalHeight);
+      const dw = img.naturalWidth * k, dh = img.naturalHeight * k;
+      g.drawImage(img, M + (fw - dw) / 2, M + (fh - dh) / 2, dw, dh);
+      g.textBaseline = "alphabetic";
+      g.fillStyle = "#a8432a";
+      g.font = 'bold 84px "Segoe Script","Bradley Hand","Snell Roundhand","Brush Script MT",cursive';
+      g.fillText(p.nome, M, M + fh + 105, W - 2 * M - 200);
+      g.fillStyle = "#7a6a5c";
+      g.font = "600 34px sans-serif";
+      g.fillText((p.padre ? p.padre.nome : p.data || "").toUpperCase(), M, M + fh + 160);
+      // francobollo
+      const sx = W - M - 120, sy = M + fh + 40;
+      g.fillStyle = "#fff7e0";
+      g.fillRect(sx, sy, 110, 135);
+      g.strokeStyle = "#c9a96a";
+      g.lineWidth = 5;
+      g.setLineDash([6, 6]);
+      g.strokeRect(sx, sy, 110, 135);
+      g.setLineDash([]);
+      g.font = "64px sans-serif";
+      g.textAlign = "center";
+      g.fillStyle = "#000";
+      g.fillText((p.padre || p).emoji || "📍", sx + 55, sy + 88);
+      const blob = await new Promise((ok, no) => c.toBlob((b) => (b ? ok(b) : no(new Error("vuota"))), "image/png"));
+      const nomeFile = `cartolina-${slug(p.nome)}.png`;
+      const file = new File([blob], nomeFile, { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: p.nome });
+      } else {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = nomeFile;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+      }
+    } catch (e) {
+      if (e && e.name !== "AbortError") alert("Non riesco a creare la cartolina da questa foto 😕");
+    } finally {
+      stato.disabled = false;
+    }
+  }
+  $("visore-condividi").addEventListener("click", (e) => { e.stopPropagation(); condividiCartolina(); });
   $("visore-prec").addEventListener("click", (e) => { e.stopPropagation(); altraFoto(-1); });
   $("visore-succ").addEventListener("click", (e) => { e.stopPropagation(); altraFoto(1); });
   // scorri col dito per cambiare foto
