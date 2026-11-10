@@ -118,7 +118,8 @@
       img.loading = "lazy";
       img.alt = p.nome;
       conFallback(img, src);
-      img.addEventListener("click", () => apriVisore(img.src));
+      const caricata = (p.fotoAggiunte || []).includes(src);
+      img.addEventListener("click", () => apriVisore(img.src, caricata ? { posto: p, path: src } : null));
       galleria.appendChild(img);
     });
     if (p.album) {
@@ -153,8 +154,11 @@
     $("scheda-musica").innerHTML = htmlMusica(p.musica);
     if (p.audioAggiunto) {
       const blocco = document.createElement("div");
-      blocco.innerHTML = `${p.audioAggiunto.titolo ? `<p>${testo(p.audioAggiunto.titolo)}</p>` : ""}<audio controls preload="none"></audio>`;
+      blocco.innerHTML = `${p.audioAggiunto.titolo ? `<p>${testo(p.audioAggiunto.titolo)}</p>` : ""}<audio controls preload="none"></audio><button class="btn-secondario largo" style="margin-top:8px">🗑 Elimina audio caricato</button>`;
       conFallback(blocco.querySelector("audio"), p.audioAggiunto.file);
+      blocco.querySelector("button").addEventListener("click", () => {
+        if (confirm("Eliminare questo audio?")) conChiave(() => elimina(p, "audio", p.audioAggiunto.file));
+      });
       $("scheda-musica").appendChild(blocco);
     }
     const fileAudio = audioDi(p);
@@ -504,6 +508,39 @@
     if (!leggiChiave()) { dopoChiave = azione; apri("chiave"); return; }
     azione();
   }
+  async function eliminaFile(path) {
+    const r = await fetch(`${api(path)}?ref=main&t=${Date.now()}`, { headers: intestazioni(), cache: "no-store" });
+    if (r.status === 404) return;
+    if (r.status === 401 || r.status === 403) throw new Error("chiave");
+    if (!r.ok) throw new Error(`GitHub ha risposto ${r.status}`);
+    const { sha } = await r.json();
+    const d = await fetch(api(path), {
+      method: "DELETE",
+      headers: { ...intestazioni(), "Content-Type": "application/json" },
+      body: JSON.stringify({ message: `Elimina ${path}`, sha, branch: "main" })
+    });
+    if (!d.ok && d.status !== 404) throw new Error(`GitHub ha risposto ${d.status}`);
+  }
+
+  // Toglie dall'elenco e poi cancella il file dal repo
+  async function elimina(p, tipo, path) {
+    const stato = $("media-stato");
+    stato.textContent = "Elimino…";
+    try {
+      const dati = await modificaMedia(`Elimina ${tipo}: ${p.nome}`, (d) => {
+        const m = d[p.nome];
+        if (!m) return;
+        if (tipo === "foto") m.foto = (m.foto || []).filter((f) => f !== path);
+        else if (m.audio && m.audio.file === path) delete m.audio;
+      });
+      await eliminaFile(path);
+      uniscMedia(dati);
+      stato.textContent = tipo === "foto" ? "Foto eliminata ✅" : "Audio eliminato ✅";
+    } catch (err) {
+      erroreMedia(err);
+    }
+  }
+
   $("btn-foto").addEventListener("click", () => conChiave(() => $("in-foto").click()));
   $("btn-audio").addEventListener("click", () => conChiave(() => $("in-audio").click()));
 
@@ -575,11 +612,21 @@
 
   // --- Foto a schermo intero ----------------------------------------------
   const visore = $("visore");
-  function apriVisore(src) {
+  let fotoVisore = null;
+  function apriVisore(src, caricata) {
     visore.querySelector("img").src = src;
+    fotoVisore = caricata || null;
+    $("visore-elimina").hidden = !fotoVisore;
     visore.hidden = false;
   }
   visore.addEventListener("click", () => (visore.hidden = true));
+  $("visore-elimina").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!fotoVisore || !confirm("Eliminare questa foto?")) return;
+    const { posto, path } = fotoVisore;
+    visore.hidden = true;
+    conChiave(() => elimina(posto, "foto", path));
+  });
 
   // --- Funzionamento offline / installazione ------------------------------
   if ("serviceWorker" in navigator) {

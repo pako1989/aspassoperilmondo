@@ -276,3 +276,11 @@ button.btn-secondario:disabled { opacity: 0.4; cursor: default; }
 .puzzle.finito { gap: 0; }
 #ritmo-tela { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; }
 .gioco-grande { font-size: 1.4rem; font-weight: 700; }
+#visore-elimina {
+  position: absolute;
+  left: 50%;
+  bottom: calc(var(--basso) + 24px);
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
