@@ -242,3 +242,37 @@ audio { width: 100%; }
   font-size: 12px;
 }
 .leaflet-bottom.leaflet-right { margin-bottom: var(--basso); }
+
+.largo { flex: 1; width: 100%; }
+button.btn-secondario:disabled { opacity: 0.4; cursor: default; }
+#scheda-foto + .largo, #scheda-musica + .largo { margin-top: 10px; }
+#media-stato { margin-top: 8px; }
+
+/* Giochi */
+.gioco {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  display: flex;
+  flex-direction: column;
+  background: #10253d;
+  color: #fff;
+  padding: var(--alto) 0 var(--basso);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.gioco-testa { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; }
+.gioco-testa h2 { margin: 0; font-size: 1.1rem; }
+.gioco .btn-chiudi { background: rgba(255, 255, 255, 0.2); color: #fff; }
+.gioco-corpo { flex: 1; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 0 12px 12px; text-align: center; }
+.gioco-corpo p { margin: 0; }
+.gioco .btn-secondario { background: rgba(255, 255, 255, 0.18); color: #fff; }
+.gioco-riga { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.gioco .btn-primario { flex: none; }
+.puzzle { display: grid; gap: 2px; background: #000; border-radius: 10px; overflow: hidden; touch-action: manipulation; }
+.puzzle div { background-repeat: no-repeat; cursor: pointer; }
+.puzzle div.scelto { outline: 4px solid #ffd23f; outline-offset: -4px; z-index: 1; }
+.puzzle.finito { gap: 0; }
+#ritmo-tela { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; }
+.gioco-grande { font-size: 1.4rem; font-weight: 700; }

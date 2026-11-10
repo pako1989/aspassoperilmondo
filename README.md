@@ -43,8 +43,17 @@ musica: { youtube: "https://www.youtube.com/watch?v=..." }
 musica: { file: "musica/ostuni.mp3", titolo: "Nome canzone" }
 ```
 
-### Foto
-Le foto restano in un album condiviso (Google Foto, iCloud, ecc.), non nel repo.
+### Foto e audio dall'app
+Nella scheda di un posto: **+ Aggiungi foto** (si possono scegliere più foto, vengono ridotte a 1600 px) e **+ Carica audio** (un file, massimo 25 MB).
+Vanno nella cartella `media/` del repo e l'elenco sta in [`media-aggiunti.json`](media-aggiunti.json). Serve lo stesso codice d'accesso delle tappe.
+⚠️ Il repo è **pubblico**: foto e audio caricati così sono visibili a chiunque abbia il link del repo.
+
+### Giochi
+- **🧩 Puzzle**: parte con una foto del posto (3×3, 4×4 o 5×5), tocca due pezzi per scambiarli.
+- **🥁 Ritmo**: le note vengono ricavate dall'audio caricato (bassi a sinistra, acuti a destra): tocca la corsia quando la nota arriva sulla linea.
+
+### Foto con album esterno
+Le foto possono restare anche in un album condiviso (Google Foto, iCloud, ecc.), non nel repo.
 Crea un album per il posto, copia il link di condivisione e incollalo così:
 ```js
 album: "https://photos.app.goo.gl/..."

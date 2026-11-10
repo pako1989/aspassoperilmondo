@@ -7,6 +7,7 @@ const FILE = [
   "index.html",
   "style.css",
   "app.js",
+  "giochi.js",
   "posti.js",
   "versione.js",
   "manifest.webmanifest",
@@ -41,7 +42,8 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(
     (nostro ? fetch(e.request.url, { cache: "no-cache" }) : fetch(e.request))
       .then((risposta) => {
-        if (risposta.ok && (risposta.type === "basic" || risposta.type === "cors")) {
+        const audio = /\.(mp3|m4a|aac|wav|ogg)$/i.test(new URL(e.request.url).pathname);
+        if (risposta.status === 200 && !audio && (risposta.type === "basic" || risposta.type === "cors")) {
           const copia = risposta.clone();
           caches.open(VERSIONE).then((c) => c.put(e.request, copia));
         }
