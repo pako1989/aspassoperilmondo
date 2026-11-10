@@ -220,9 +220,8 @@ audio { width: 100%; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.92);
+  background: radial-gradient(ellipse at center, rgba(60, 40, 30, 0.99), rgba(10, 8, 8, 0.99));
 }
-#visore img { max-width: 100%; max-height: 100%; object-fit: contain; }
 #visore .btn-chiudi {
   position: absolute;
   top: calc(var(--alto) + 12px); right: 16px;
@@ -284,3 +283,83 @@ button.btn-secondario:disabled { opacity: 0.4; cursor: default; }
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
 }
+
+/* Foto a forma di cartolina */
+.cartolina {
+  position: relative;
+  margin: 0;
+  width: min(92vw, 520px);
+  padding: 12px 12px 10px;
+  background: #fffdf5;
+  border-radius: 3px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(120, 90, 50, 0.15);
+  transform: rotate(var(--inclina, -1.2deg));
+}
+.cartolina.entra { animation: cartolina-entra 0.35s ease-out; }
+@keyframes cartolina-entra {
+  from { opacity: 0; transform: translateY(24px) rotate(calc(var(--inclina, -1.2deg) * 4)) scale(0.92); }
+}
+.cartolina img {
+  display: block;
+  width: 100%;
+  max-height: 58vh;
+  object-fit: contain;
+  background: #2a2420;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+}
+.cartolina .nastro {
+  position: absolute;
+  top: -12px; left: 50%;
+  width: 96px; height: 26px;
+  transform: translateX(-50%) rotate(-3deg);
+  background: rgba(240, 196, 90, 0.7);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  clip-path: polygon(0 8%, 4% 0, 8% 10%, 12% 0, 88% 0, 92% 10%, 96% 0, 100% 8%, 100% 92%, 96% 100%, 92% 90%, 88% 100%, 12% 100%, 8% 90%, 4% 100%, 0 92%);
+}
+.cartolina figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 4px 2px;
+  color: #3b2f26;
+}
+.cart-testo { display: flex; flex-direction: column; min-width: 0; }
+.cart-testo b {
+  font-family: "Segoe Script", "Bradley Hand", "Snell Roundhand", "Brush Script MT", cursive;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  color: #a8432a;
+  overflow-wrap: anywhere;
+}
+.cart-testo small { color: #7a6a5c; letter-spacing: 0.08em; text-transform: uppercase; font-size: 0.7rem; }
+.cart-testo small:empty { display: none; }
+.francobollo {
+  flex: none;
+  width: 46px; height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.6rem;
+  background: #fff7e0;
+  border: 3px double #c9a96a;
+  outline: 2px dotted #e6d3a3;
+  outline-offset: 2px;
+  transform: rotate(3deg);
+}
+.btn-freccia {
+  position: absolute;
+  top: 50%;
+  width: 44px; height: 44px;
+  margin-top: -22px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.btn-freccia.sx { left: 6px; }
+.btn-freccia.dx { right: 6px; }

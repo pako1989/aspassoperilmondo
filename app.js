@@ -118,8 +118,7 @@
       img.loading = "lazy";
       img.alt = p.nome;
       conFallback(img, src);
-      const caricata = (p.fotoAggiunte || []).includes(src);
-      img.addEventListener("click", () => apriVisore(img.src, caricata ? { posto: p, path: src } : null));
+      img.addEventListener("click", () => apriVisore(p, [...galleria.querySelectorAll("img")].indexOf(img)));
       galleria.appendChild(img);
     });
     if (p.album) {
@@ -613,13 +612,53 @@
   // --- Foto a schermo intero ----------------------------------------------
   const visore = $("visore");
   let fotoVisore = null;
-  function apriVisore(src, caricata) {
-    visore.querySelector("img").src = src;
-    fotoVisore = caricata || null;
+  let visorePosto = null, visoreIndice = 0;
+  // Mostra la foto come una cartolina: cornice, nastro adesivo, nome del posto e francobollo
+  function mostraCartolina() {
+    const p = visorePosto;
+    const lista = tutteFoto(p);
+    const src = lista[visoreIndice];
+    const img = visore.querySelector("img");
+    conFallback(img, src);
+    const fig = visore.querySelector(".cartolina");
+    fig.style.setProperty("--inclina", (visoreIndice % 2 ? 1.2 : -1.2) + "deg");
+    fig.classList.remove("entra");
+    void fig.offsetWidth;
+    fig.classList.add("entra");
+    $("cart-nome").textContent = p.nome;
+    $("cart-data").textContent = p.data || "";
+    $("cart-emoji").textContent = p.emoji || "📍";
+    const caricata = (p.fotoAggiunte || []).includes(src);
+    fotoVisore = caricata ? { posto: p, path: src } : null;
     $("visore-elimina").hidden = !fotoVisore;
+    $("visore-prec").hidden = $("visore-succ").hidden = lista.length < 2;
+  }
+  function apriVisore(p, indice) {
+    visorePosto = p;
+    visoreIndice = Math.max(0, indice);
+    mostraCartolina();
     visore.hidden = false;
   }
-  visore.addEventListener("click", () => (visore.hidden = true));
+  function altraFoto(passo) {
+    const n = tutteFoto(visorePosto).length;
+    visoreIndice = (visoreIndice + passo + n) % n;
+    mostraCartolina();
+  }
+  $("visore-prec").addEventListener("click", (e) => { e.stopPropagation(); altraFoto(-1); });
+  $("visore-succ").addEventListener("click", (e) => { e.stopPropagation(); altraFoto(1); });
+  // scorri col dito per cambiare foto
+  let inizioX = null;
+  visore.addEventListener("touchstart", (e) => { inizioX = e.touches[0].clientX; }, { passive: true });
+  visore.addEventListener("touchend", (e) => {
+    if (inizioX === null || tutteFoto(visorePosto).length < 2) return;
+    const dx = e.changedTouches[0].clientX - inizioX;
+    inizioX = null;
+    if (Math.abs(dx) > 50) { visore.dataset.scorso = "1"; altraFoto(dx < 0 ? 1 : -1); }
+  });
+  visore.addEventListener("click", () => {
+    if (visore.dataset.scorso) { delete visore.dataset.scorso; return; } // era uno scorrimento, non un tocco
+    visore.hidden = true;
+  });
   $("visore-elimina").addEventListener("click", (e) => {
     e.stopPropagation();
     if (!fotoVisore || !confirm("Eliminare questa foto?")) return;

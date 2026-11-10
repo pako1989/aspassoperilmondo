@@ -46,7 +46,7 @@ musica: { file: "musica/ostuni.mp3", titolo: "Nome canzone" }
 ### Foto e audio dall'app
 Nella scheda di un posto: **+ Aggiungi foto** (si possono scegliere più foto, vengono ridotte a 1600 px) e **+ Carica audio** (un file, massimo 25 MB).
 Vanno nella cartella `media/` del repo e l'elenco sta in [`media-aggiunti.json`](media-aggiunti.json). Serve lo stesso codice d'accesso delle tappe.
-Per cancellare: tocca una foto caricata dall'app e poi **🗑 Elimina foto**, oppure **🗑 Elimina audio caricato** sotto il player (le foto messe a mano in `posti.js` non si cancellano dall'app).
+Per cancellare: tocca una foto caricata dall'app (si apre come una cartolina, con le frecce o scorrendo col dito per vedere le altre) e poi **🗑 Elimina foto**, oppure **🗑 Elimina audio caricato** sotto il player (le foto messe a mano in `posti.js` non si cancellano dall'app).
 ⚠️ Il repo è **pubblico**: foto e audio caricati così sono visibili a chiunque abbia il link del repo.
 
 ### Giochi
