@@ -55,6 +55,16 @@ Nella scheda tocca una tappa (es. Marzamemi): sotto compaiono *Foto · Marzamemi
 ### Aggiornamenti tra due telefoni
 Tappe, foto e audio sono salvati su GitHub: l'altro telefono li vede quando apre l'app o quando ci torna sopra (o col tasto ⟳). Il codice d'accesso serve solo per *aggiungere*, non per vedere.
 
+### Viaggi: prenotazioni e posti da visitare
+Il tasto 📒 in alto apre tre schede: **Prenotati** (con totale e quanto resta da pagare), **Da prenotare** (con il tasto "Fatto: segna come prenotato") e **Da visitare** (lista di posti con la spunta quando li visiti). Si salva in [`viaggi.json`](viaggi.json) con lo stesso codice d'accesso: l'altro telefono vede tutto quando apre l'app.
+⚠️ Il repo è pubblico: niente codici di prenotazione, password o dati personali.
+
+### Canzone
+Nella scheda: **Aggiungi/Cambia link** (YouTube o Spotify) e **Togli canzone**, anche per quella scritta in `posti.js`.
+
+### Cartolina da condividere
+Aprendo una foto, **📮 Condividi** crea un'immagine a forma di cartolina (foto, nome del posto, francobollo) e la manda con il menu Condividi del telefono (o la scarica).
+
 ### Giochi
 - **🧩 Puzzle**: parte con una foto del posto (3×3, 4×4 o 5×5), tocca due pezzi per scambiarli.
 - **🥁 Ritmo**: le note vengono ricavate dall'audio caricato (bassi a sinistra, acuti a destra): tocca la corsia quando la nota arriva sulla linea.

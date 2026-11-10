@@ -275,14 +275,15 @@ button.btn-secondario:disabled { opacity: 0.4; cursor: default; }
 .puzzle.finito { gap: 0; }
 #ritmo-tela { flex: 1; min-height: 0; width: 100%; display: block; touch-action: none; }
 .gioco-grande { font-size: 1.4rem; font-weight: 700; }
-#visore-elimina {
+.visore-azioni {
   position: absolute;
   left: 50%;
   bottom: calc(var(--basso) + 24px);
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
+  display: flex;
+  gap: 10px;
 }
+.visore-azioni .btn-secondario { background: rgba(255, 255, 255, 0.2); color: #fff; white-space: nowrap; }
 
 /* Foto a forma di cartolina */
 .cartolina {
@@ -381,3 +382,56 @@ button.btn-secondario:disabled { opacity: 0.4; cursor: default; }
 }
 #btn-torna-posto { margin-top: 16px; }
 #titolo-foto { scroll-margin-top: 8px; }
+
+/* Viaggi: prenotazioni e posti da visitare */
+.pannello.alto { max-height: 88vh; }
+.schede { display: flex; gap: 6px; margin: 6px 0 12px; }
+.schede button {
+  flex: 1;
+  padding: 10px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(127, 127, 127, 0.15);
+  color: var(--testo);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.schede button.on { background: linear-gradient(135deg, var(--blu), var(--tramonto)); color: #fff; }
+.riepilogo { margin: 6px 0 10px; color: var(--tenue); }
+.voce {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 4px;
+  border-bottom: 1px solid rgba(127, 127, 127, 0.15);
+  cursor: pointer;
+}
+.voce-emoji { font-size: 1.5rem; width: 32px; text-align: center; flex: none; }
+.voce-testo { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.voce-testo small, .voce-lato small { color: var(--tenue); font-size: 0.78rem; margin-top: 2px; }
+.voce-lato { display: flex; flex-direction: column; align-items: flex-end; flex: none; }
+small.scade { color: #d9682f; }
+small.pagato { color: #2e9d5b; }
+.voce.visita { cursor: default; }
+.voce.fatto span { text-decoration: line-through; color: var(--tenue); }
+.spunta { display: flex; align-items: center; gap: 10px; flex: 1; font-size: 1.02rem; }
+.spunta input { width: 22px; height: 22px; flex: none; }
+.modulo { display: flex; flex-direction: column; gap: 10px; }
+.modulo label { display: flex; flex-direction: column; gap: 4px; font-size: 0.8rem; color: var(--tenue); flex: 1; min-width: 0; }
+.modulo label.spunta { flex-direction: row; color: var(--testo); font-size: 1rem; }
+.modulo .riga { margin: 0; }
+.modulo select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--testo);
+  font-size: 16px;
+}
+#viaggi .riga { margin: 10px 0; }
+#viaggi > .btn-secondario.largo { margin-top: 8px; }
+
+.comandi-musica { margin-top: 10px; }
+.comandi-musica .riga { margin: 8px 0 0; }

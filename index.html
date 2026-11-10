@@ -19,13 +19,14 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
   <header class="barra">
     <h1>A spasso per il mondo</h1>
     <div class="azioni">
       <button id="btn-aggiorna" class="btn-tondo" aria-label="Aggiorna l'app">⟳</button>
+      <button id="btn-viaggi" class="btn-tondo" aria-label="Prenotazioni e posti da visitare">📒</button>
       <button id="btn-elenco" class="btn-tondo" aria-label="Elenco dei posti">☰</button>
     </div>
   </header>
@@ -97,6 +98,22 @@
     </div>
   </section>
 
+  <!-- Prenotazioni e posti da visitare -->
+  <section id="viaggi" class="pannello alto" hidden>
+    <div class="maniglia"></div>
+    <div class="pannello-testa">
+      <h2>📒 Viaggi</h2>
+      <button class="btn-chiudi" data-chiudi="viaggi" aria-label="Chiudi">✕</button>
+    </div>
+    <div class="schede">
+      <button data-scheda="prenotati">Prenotati</button>
+      <button data-scheda="daprenotare">Da prenotare</button>
+      <button data-scheda="davisitare">Da visitare</button>
+    </div>
+    <div id="viaggi-corpo"></div>
+    <p id="viaggi-stato" class="errore"></p>
+  </section>
+
   <!-- Codice d'accesso per salvare -->
   <section id="chiave" class="pannello compatto" hidden>
     <div class="pannello-testa">
@@ -121,15 +138,19 @@
     <button class="btn-chiudi" aria-label="Chiudi">✕</button>
     <button id="visore-prec" class="btn-freccia sx" aria-label="Foto precedente" hidden>‹</button>
     <button id="visore-succ" class="btn-freccia dx" aria-label="Foto successiva" hidden>›</button>
-    <button id="visore-elimina" class="btn-secondario" hidden>🗑 Elimina foto</button>
+    <div class="visore-azioni">
+      <button id="visore-condividi" class="btn-secondario">📮 Condividi</button>
+      <button id="visore-elimina" class="btn-secondario" hidden>🗑 Elimina foto</button>
+    </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <!-- ?v=12 deve essere uguale al numero in versione.js: così il telefono scarica sempre i file nuovi -->
-  <script src="versione.js?v=12"></script>
-  <script src="posti.js?v=12"></script>
-  <script src="giochi.js?v=12"></script>
-  <script src="app.js?v=12"></script>
+  <!-- ?v=14 deve essere uguale al numero in versione.js: così il telefono scarica sempre i file nuovi -->
+  <script src="versione.js?v=14"></script>
+  <script src="posti.js?v=14"></script>
+  <script src="giochi.js?v=14"></script>
+  <script src="app.js?v=14"></script>
+  <script src="viaggi.js?v=14"></script>
 </body>
 </html>

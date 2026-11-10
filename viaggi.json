@@ -1,0 +1,155 @@
+{
+  "prenotazioni": [],
+  "daVisitare": [
+    {
+      "id": "v01",
+      "nome": "Collodi",
+      "fatto": false
+    },
+    {
+      "id": "v02",
+      "nome": "Pisa",
+      "fatto": false
+    },
+    {
+      "id": "v03",
+      "nome": "Greve in Chianti",
+      "fatto": false
+    },
+    {
+      "id": "v04",
+      "nome": "Arezzo",
+      "fatto": false
+    },
+    {
+      "id": "v05",
+      "nome": "Cortona",
+      "fatto": false
+    },
+    {
+      "id": "v06",
+      "nome": "Forte dei Marmi",
+      "fatto": false
+    },
+    {
+      "id": "v07",
+      "nome": "Castiglione della Pescaia",
+      "fatto": false
+    },
+    {
+      "id": "v08",
+      "nome": "Castello di Celsa (Sovicille)",
+      "fatto": false
+    },
+    {
+      "id": "v09",
+      "nome": "Greccio",
+      "fatto": false
+    },
+    {
+      "id": "v10",
+      "nome": "Burano",
+      "fatto": false
+    },
+    {
+      "id": "v11",
+      "nome": "Venezia",
+      "fatto": false
+    },
+    {
+      "id": "v12",
+      "nome": "Lago di Como",
+      "fatto": false
+    },
+    {
+      "id": "v13",
+      "nome": "Trieste",
+      "fatto": false
+    },
+    {
+      "id": "v14",
+      "nome": "Jesolo",
+      "fatto": false
+    },
+    {
+      "id": "v15",
+      "nome": "Lignano Sabbiadoro",
+      "fatto": false
+    },
+    {
+      "id": "v16",
+      "nome": "Tropea",
+      "fatto": false
+    },
+    {
+      "id": "v17",
+      "nome": "Scilla",
+      "fatto": false
+    },
+    {
+      "id": "v18",
+      "nome": "Reggio Calabria",
+      "fatto": false
+    },
+    {
+      "id": "v19",
+      "nome": "San Vito Chietino",
+      "fatto": false
+    },
+    {
+      "id": "v20",
+      "nome": "Riviera del Conero",
+      "fatto": false
+    },
+    {
+      "id": "v21",
+      "nome": "Maiori",
+      "fatto": false
+    },
+    {
+      "id": "v22",
+      "nome": "Procida",
+      "fatto": false
+    },
+    {
+      "id": "v23",
+      "nome": "Sapri",
+      "fatto": false
+    },
+    {
+      "id": "v24",
+      "nome": "Siracusa",
+      "fatto": false
+    },
+    {
+      "id": "v25",
+      "nome": "Sciacca",
+      "fatto": false
+    },
+    {
+      "id": "v26",
+      "nome": "Borgo Parrini",
+      "fatto": false
+    },
+    {
+      "id": "v27",
+      "nome": "Marsala",
+      "fatto": false
+    },
+    {
+      "id": "v28",
+      "nome": "Gubbio",
+      "fatto": false
+    },
+    {
+      "id": "v29",
+      "nome": "Corciano",
+      "fatto": false
+    },
+    {
+      "id": "v30",
+      "nome": "Isole Tremiti",
+      "fatto": false
+    }
+  ]
+}
