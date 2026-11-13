@@ -343,12 +343,64 @@
     if (g.piatti) corpo.appendChild(lista("Piatti tipici", g.piatti));
     if (g.vedere) corpo.appendChild(el("p", "data", "Consigli scritti a mano: controlla orari, aperture e prezzi."));
     const box = el("div", "riassunto");
-    corpo.appendChild(box);
+    const nomePulito = x.nome.replace(/ \(.*\)$/, "");
+    const KEY = {
+      vedere: /cosa vedere|da vedere|monument|luoghi d.interesse|attrazion|architetture|patrimonio|siti d/i,
+      piatti: /a tavola|mangiare|cucina|gastronomia|prodotti tipici|piatti|enogastronom|specialit/i,
+    };
+    async function testoWiki(host) {
+      const u = `https://${host}/w/api.php?action=query&prop=extracts&explaintext=1&redirects=1&format=json&origin=*&titles=${encodeURIComponent(nomePulito)}`;
+      const r = await fetch(u);
+      if (!r.ok) return "";
+      const j = await r.json();
+      const p = Object.values((j.query && j.query.pages) || {})[0];
+      return p && p.extract ? p.extract : "";
+    }
+    function sezione(testo, re) {
+      const parti = testo.split(/\n== *([^=\n]+?) *==\n/);
+      let out = "";
+      for (let i = 1; i < parti.length; i += 2) {
+        if (re.test(parti[i]) && parti[i + 1] && parti[i + 1].trim().length > 40) out += parti[i + 1].trim() + "\n";
+        if (out.length > 1800) break;
+      }
+      return out.trim();
+    }
+    function taglia(txt, max) {
+      txt = txt.replace(/\n==+ *([^=\n]+?) *==+/g, "\n$1:").replace(/\n{3,}/g, "\n\n");
+      if (txt.length <= max) return txt;
+      const c = txt.slice(0, max);
+      const p = Math.max(c.lastIndexOf(". "), c.lastIndexOf("\n"));
+      return (p > max / 2 ? c.slice(0, p + 1) : c) + " …";
+    }
+    async function daInternet(tipo, etichetta) {
+      box.textContent = "Cerco su Wikivoyage e Wikipedia…";
+      try {
+        let testo = "", fonte = "";
+        for (const host of ["it.wikivoyage.org", "it.wikipedia.org"]) {
+          const full = await testoWiki(host).catch(() => "");
+          const sez = full ? sezione(full, KEY[tipo]) : "";
+          if (sez) { testo = sez; fonte = host; break; }
+        }
+        if (!testo) throw new Error("no");
+        const wv = fonte === "it.wikivoyage.org";
+        const url = `https://${fonte}/wiki/${encodeURIComponent(nomePulito.replace(/ /g, "_"))}`;
+        box.innerHTML = `<h4>${t(etichetta)}</h4><p style="white-space:pre-line">${t(taglia(testo, 1600))}</p><p><a href="${t(url)}" target="_blank" rel="noopener">Continua su ${wv ? "Wikivoyage" : "Wikipedia"} ↗</a></p>`;
+      } catch (e) {
+        box.textContent = "Non ho trovato nulla di scritto per questo posto: riprova con i tasti di ricerca qui sotto.";
+      }
+    }
+    const ib = el("div", "riga");
+    const bv = el("button", "btn-secondario largo", "🔎 Cosa vedere (da internet)");
+    bv.addEventListener("click", () => daInternet("vedere", "Cosa vedere"));
+    const bp = el("button", "btn-secondario largo", "🍝 Piatti tipici (da internet)");
+    bp.addEventListener("click", () => daInternet("piatti", "Piatti tipici"));
+    ib.append(bv, bp);
+    corpo.appendChild(ib);
     const rs = el("button", "btn-secondario largo", "📖 Riassunto da Wikipedia");
     rs.addEventListener("click", async () => {
       box.textContent = "Cerco…";
       try {
-        const r = await fetch(`https://it.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(x.nome.replace(/ \(.*\)$/, ""))}?redirect=true`);
+        const r = await fetch(`https://it.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(nomePulito)}?redirect=true`);
         const j = r.ok ? await r.json() : null;
         if (!j || j.type === "disambiguation" || !j.extract) throw new Error("no");
         box.innerHTML = `<p>${t(j.extract)}</p>${j.content_urls ? `<p><a href="${t(j.content_urls.desktop.page)}" target="_blank" rel="noopener">Leggi su Wikipedia ↗</a></p>` : ""}`;
@@ -357,10 +409,11 @@
       }
     });
     corpo.appendChild(rs);
+    corpo.appendChild(box);
     const cl = el("div", "riga");
     cl.append(link("Cosa vedere ↗", cerca(`cosa vedere a ${x.nome}`)), link("Piatti tipici ↗", cerca(`piatti tipici ${x.nome} cosa mangiare`)));
     corpo.appendChild(cl);
-    corpo.appendChild(link("Guida di viaggio (Wikivoyage) ↗", `https://it.wikivoyage.org/wiki/${encodeURIComponent(x.nome.replace(/ \(.*\)$/, "").replace(/ /g, "_"))}`));
+    corpo.appendChild(link("Guida di viaggio (Wikivoyage) ↗", `https://it.wikivoyage.org/wiki/${encodeURIComponent(nomePulito.replace(/ /g, "_"))}`));
 
     // appunti
     corpo.appendChild(el("h3", "", "📝 Appunti"));
