@@ -9,7 +9,7 @@
   const A = window.APP;
   const $ = (id) => document.getElementById(id);
   const FILE = "viaggi.json";
-  const TIPI = [["🏨", "Hotel"], ["🏡", "Casa o villa"], ["✈️", "Volo"], ["🚆", "Treno"], ["🚗", "Auto"], ["🎟️", "Altro"]];
+  const TIPI = [["🏨", "Hotel"], ["🏡", "Casa o villa"], ["🌾", "Agriturismo"], ["✈️", "Volo"], ["🚆", "Treno"], ["🚗", "Auto"], ["🎟️", "Altro"]];
 
   let dati = { prenotazioni: [], daVisitare: [] };
   let scheda = "prenotati"; // prenotati | daprenotare | davisitare
@@ -86,7 +86,7 @@
       if (lista.length) corpo.appendChild(el("p", "riepilogo", `Totale <b>${euro(totale)}</b> · ancora da pagare <b>${euro(daPagare)}</b>`));
     }
     lista.forEach((p) => {
-      const emoji = (TIPI.find((x) => x[1] === p.tipo) || TIPI[5])[0];
+      const emoji = (TIPI.find((x) => x[1] === p.tipo) || TIPI[TIPI.length - 1])[0];
       const riga = el("div", "voce");
       riga.innerHTML = `<span class="voce-emoji">${emoji}</span>
         <span class="voce-testo"><b>${t(p.nome || "Senza nome")}</b>
