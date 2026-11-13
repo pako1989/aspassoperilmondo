@@ -555,8 +555,9 @@
           } catch (e) { /* uso solo i nomi di ripiego */ }
           ["gemini-2.5-flash", "gemini-2.5-flash-lite"].forEach((n) => tentativi.push([n, true]));
           for (const [modello, senzaPensiero] of tentativi) {
+            if (sec >= 45) break; // dopo 45 secondi in tutto smetto di provare
             const ctrl = new AbortController();
-            const stop = setTimeout(() => ctrl.abort(), 90000);
+            const stop = setTimeout(() => ctrl.abort(), 15000);
             const gc = { responseMimeType: "application/json" };
             if (senzaPensiero) gc.thinkingConfig = { thinkingBudget: 0 };
             let r;
@@ -568,7 +569,7 @@
                 signal: ctrl.signal,
               });
             } catch (e) {
-              throw new Error(e.name === "AbortError" ? "nessuna risposta in 90 secondi" : "connessione fallita");
+              throw new Error(e.name === "AbortError" ? "nessuna risposta in 15 secondi" : "connessione fallita");
             } finally { clearTimeout(stop); }
             const jj = await r.json().catch(() => ({}));
             if (r.ok) { j = jj; lsSet("ia-modello", modello); break; }
