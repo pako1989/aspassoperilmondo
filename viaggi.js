@@ -507,6 +507,64 @@
       corpo.appendChild(d);
     });
 
+    // consigli dell'IA (Gemini, con chiave gratuita di Google AI Studio)
+    const ia = document.createElement("details");
+    ia.className = "a-comparsa";
+    ia.appendChild(el("summary", "", "✨ Consigli dell'IA"));
+    const iaBox = el("div", "riassunto");
+    ia.appendChild(iaBox);
+    corpo.appendChild(ia);
+    const lsGet = (k) => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
+    const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+    function iaDisegna(d, daCache) {
+      const voci = (arr) => (arr || []).map((v) => `<li><b>${t(v.nome || "")}</b>${v.descrizione ? `: ${t(v.descrizione)}` : ""}</li>`).join("");
+      iaBox.innerHTML = `<h4>Cosa vedere</h4><ul>${voci(d.vedere)}</ul><h4>Piatti tipici</h4><ul>${voci(d.piatti)}</ul><p class="data">Scritto da un'IA: può sbagliare, controlla orari e aperture.${daCache ? " (risposta salvata)" : ""}</p>`;
+      const nuova = el("button", "btn-secondario", "Rifai la domanda");
+      nuova.addEventListener("click", () => iaChiedi(true));
+      iaBox.appendChild(nuova);
+    }
+    async function iaChiedi(forza) {
+      const chiave = lsGet("chiave-gemini");
+      if (!chiave) { iaChiave(); return; }
+      const cacheKey = `ia-${nomePulito}`;
+      if (!forza) {
+        try { const c = JSON.parse(lsGet(cacheKey) || "null"); if (c && c.vedere) { iaDisegna(c, true); return; } } catch (e) {}
+      }
+      iaBox.textContent = "Chiedo all'IA…";
+      try {
+        const prompt = `Sono in vacanza a ${x.nome} (Italia). Dammi in italiano i luoghi più importanti da visitare lì e nei dintorni e i piatti tipici da mangiare. Rispondi SOLO con JSON: {"vedere":[{"nome":"...","descrizione":"una frase"}],"piatti":[{"nome":"...","descrizione":"una frase"}]} con 6 luoghi e 5 piatti.`;
+        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${encodeURIComponent(chiave)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }),
+        });
+        const j = await r.json();
+        if (!r.ok) throw new Error((j.error && j.error.message) || "errore");
+        const testo = j.candidates[0].content.parts.map((p) => p.text || "").join("");
+        const d = JSON.parse(testo.replace(/^```json|```$/g, "").trim());
+        lsSet(cacheKey, JSON.stringify(d));
+        iaDisegna(d, false);
+      } catch (e) {
+        iaBox.innerHTML = `<p class="errore">L'IA non ha risposto (${t(String(e.message || e).slice(0, 120))}). Controlla la chiave o riprova tra poco.</p>`;
+        const cambia = el("button", "btn-secondario", "Cambia chiave");
+        cambia.addEventListener("click", iaChiave);
+        iaBox.appendChild(cambia);
+      }
+    }
+    function iaChiave() {
+      iaBox.innerHTML = `<p class="data">Incolla la tua chiave gratuita di <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a> (resta solo su questo telefono).</p><div class="riga"><input type="text" placeholder="Chiave Gemini" autocomplete="off"><button class="btn-secondario stretto">Salva</button></div>`;
+      iaBox.querySelector("button").addEventListener("click", () => {
+        const v = iaBox.querySelector("input").value.trim();
+        if (!v) return;
+        lsSet("chiave-gemini", v);
+        iaChiedi(false);
+      });
+    }
+    const iaBtn = el("button", "btn-secondario largo", "✨ Chiedi all'IA cosa vedere e mangiare");
+    iaBtn.addEventListener("click", () => { ia.open = true; iaChiedi(false); });
+    corpo.insertBefore(iaBtn, ia);
+    if (lsGet("chiave-gemini") && lsGet(`ia-${nomePulito}`)) { ia.open = true; iaChiedi(false); }
+
     // appunti
     corpo.appendChild(el("h3", "", "📝 Appunti"));
     const ta = el("textarea");
