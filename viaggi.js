@@ -421,10 +421,21 @@
       if (!c) { vivoV.textContent = ""; return; }
       vivoV.textContent = "Cerco cosa c'è da vedere qui vicino…";
       try {
-        const u = `https://it.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${c.lat}%7C${c.lng}&ggsradius=10000&ggslimit=15&prop=extracts%7Cpageimages&pithumbsize=200&exintro=1&explaintext=1&exsentences=1&exlimit=max&format=json&origin=*`;
-        const j = await fetch(u).then((r) => r.json());
-        const pgs = Object.values((j.query && j.query.pages) || {}).filter((p) => p.extract && p.extract.length > 30);
-        pgs.sort((a, b) => (a.index || 0) - (b.index || 0));
+        const API = "https://it.wikipedia.org/w/api.php?format=json&origin=*&action=query";
+        // 1) i posti nel raggio di 10 km, ordinati per visite (i più famosi per primi)
+        const j1 = await fetch(`${API}&generator=geosearch&ggscoord=${c.lat}%7C${c.lng}&ggsradius=10000&ggslimit=50&prop=pageviews&pvipdays=60`).then((r) => r.json());
+        const SCARTA = /^(Via|Viale|Piazza della Stazione|Stazione|Linea|Diocesi|Arcidiocesi|Provincia|Comune|Frazioni|Elenco|Lista)\b/i;
+        const viste = (p) => Object.values(p.pageviews || {}).reduce((n, v) => n + (v || 0), 0);
+        const top = Object.values((j1.query && j1.query.pages) || {})
+          .filter((p) => p.title !== nomePulito && !SCARTA.test(p.title))
+          .sort((p, q) => viste(q) - viste(p))
+          .slice(0, 12);
+        if (!top.length) throw new Error("no");
+        // 2) breve descrizione e miniatura di ciascuno
+        const j2 = await fetch(`${API}&prop=extracts%7Cpageimages&pithumbsize=200&exintro=1&explaintext=1&exsentences=1&exlimit=max&titles=${encodeURIComponent(top.map((p) => p.title).join("|"))}`).then((r) => r.json());
+        const dettagli = {};
+        Object.values((j2.query && j2.query.pages) || {}).forEach((p) => { dettagli[p.title] = p; });
+        const pgs = top.map((p) => dettagli[p.title]).filter((p) => p && p.extract && p.extract.length > 30);
         if (!pgs.length) throw new Error("no");
         vivoV.innerHTML = `<h4>Cosa vedere qui vicino</h4><ul>${pgs.slice(0, 10).map((p) => `<li>${imgHtml(p.thumbnail && p.thumbnail.source, "foto-lista")}<b><a href="https://it.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g, "_"))}" target="_blank" rel="noopener">${t(p.title)}</a></b>: ${t(p.extract)}</li>`).join("")}</ul><p class="data">Da Wikipedia, in tempo reale.</p>`;
       } catch (e) {
