@@ -12,6 +12,19 @@
       "scadenza": "2026-11-20",
       "link": "https://www.booking.com/Share-eqjHGu",
       "note": "colazione inclusa"
+    },
+    {
+      "id": "mwfip95z6ib",
+      "stato": "prenotato",
+      "tipo": "Hotel",
+      "nome": "Agriturismo Villa toscana",
+      "dal": "2026-12-05",
+      "al": "2026-12-08",
+      "prezzo": 363,
+      "pagato": false,
+      "scadenza": "2026-11-20",
+      "link": "https://www.booking.com/Share-eqjHGu",
+      "note": "colazione inclusa"
     }
   ],
   "daVisitare": [
