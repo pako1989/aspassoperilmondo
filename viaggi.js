@@ -533,19 +533,41 @@
       iaBox.textContent = "Chiedo all'IA…";
       try {
         const prompt = `Sono in vacanza a ${x.nome} (Italia). Dammi in italiano i luoghi più importanti da visitare lì e nei dintorni e i piatti tipici da mangiare. Rispondi SOLO con JSON: {"vedere":[{"nome":"...","descrizione":"una frase"}],"piatti":[{"nome":"...","descrizione":"una frase"}]} con 6 luoghi e 5 piatti.`;
-        const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${encodeURIComponent(chiave)}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { responseMimeType: "application/json" } }),
-        });
-        const j = await r.json();
-        if (!r.ok) throw new Error((j.error && j.error.message) || "errore");
+        let sec = 0;
+        const timer = setInterval(() => { sec++; iaBox.textContent = `Chiedo all'IA… ${sec}s`; }, 1000);
+        let j = null, ultimoErrore = "";
+        try {
+          // prima il modello più veloce senza "ragionamento"; se non lo accetta, provo gli altri
+          const tentativi = [["gemini-flash-latest", true], ["gemini-flash-latest", false], ["gemini-2.5-flash", true], ["gemini-2.5-flash-lite", false], ["gemini-2.0-flash", false]];
+          for (const [modello, senzaPensiero] of tentativi) {
+            const ctrl = new AbortController();
+            const stop = setTimeout(() => ctrl.abort(), 40000);
+            const gc = { responseMimeType: "application/json" };
+            if (senzaPensiero) gc.thinkingConfig = { thinkingBudget: 0 };
+            let r;
+            try {
+              r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:generateContent?key=${encodeURIComponent(chiave)}`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: gc }),
+                signal: ctrl.signal,
+              });
+            } catch (e) {
+              throw new Error(e.name === "AbortError" ? "nessuna risposta in 40 secondi" : "connessione fallita");
+            } finally { clearTimeout(stop); }
+            const jj = await r.json().catch(() => ({}));
+            if (r.ok) { j = jj; break; }
+            ultimoErrore = `${r.status}: ${(jj.error && jj.error.message) || "errore"}`;
+            if (r.status === 401 || r.status === 403) break; // chiave sbagliata: inutile riprovare. Con modello sovraccarico (503), quota (429) o non accettato provo il prossimo
+          }
+        } finally { clearInterval(timer); }
+        if (!j) throw new Error(ultimoErrore || "errore");
         const testo = j.candidates[0].content.parts.map((p) => p.text || "").join("");
         const d = JSON.parse(testo.replace(/^```json|```$/g, "").trim());
         lsSet(cacheKey, JSON.stringify(d));
         iaDisegna(d, false);
       } catch (e) {
-        iaBox.innerHTML = `<p class="errore">L'IA non ha risposto (${t(String(e.message || e).slice(0, 120))}). Controlla la chiave o riprova tra poco.</p>`;
+        iaBox.innerHTML = `<p class="errore">L'IA non ha risposto (${t(String(e.message || e).slice(0, 200))}). Controlla la chiave o riprova tra poco.</p>`;
         const cambia = el("button", "btn-secondario", "Cambia chiave");
         cambia.addEventListener("click", iaChiave);
         iaBox.appendChild(cambia);
