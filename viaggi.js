@@ -535,49 +535,60 @@
         const prompt = `Sono in vacanza a ${x.nome} (Italia). Dammi in italiano i luoghi più importanti da visitare lì e nei dintorni e i piatti tipici da mangiare. Rispondi SOLO con JSON: {"vedere":[{"nome":"...","descrizione":"una frase"}],"piatti":[{"nome":"...","descrizione":"una frase"}]} con 6 luoghi e 5 piatti.`;
         let sec = 0;
         const timer = setInterval(() => { sec++; iaBox.innerHTML = `<span class="giro"></span> Chiedo all'IA… ${sec}s`; }, 1000);
-        let j = null, ultimoErrore = "";
+        let j = null;
         try {
-          // prima il modello più veloce senza "ragionamento"; se non lo accetta, provo gli altri
-          const tentativi = [];
-          const ultimo = lsGet("ia-modello");
-          if (ultimo) tentativi.push([ultimo, true], [ultimo, false]);
-          tentativi.push(["gemini-flash-latest", true], ["gemini-flash-latest", false]);
-          // chiedo a Google quali modelli "flash" esistono oggi (i nomi cambiano spesso)
-          try {
-            const lm = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=${encodeURIComponent(chiave)}`).then((r) => r.json());
-            const versione = (n) => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1]);
-            (lm.models || [])
-              .filter((m) => /flash/.test(m.name) && (m.supportedGenerationMethods || []).includes("generateContent") && !/preview|exp|image|tts|audio|live|thinking|robotics|computer|latest/.test(m.name))
-              .map((m) => m.name.replace(/^models\//, ""))
-              .sort((p, q) => versione(q) - versione(p) || p.length - q.length)
-              .slice(0, 5)
-              .forEach((n) => tentativi.push([n, true], [n, false]));
-          } catch (e) { /* uso solo i nomi di ripiego */ }
-          ["gemini-2.5-flash", "gemini-2.5-flash-lite"].forEach((n) => tentativi.push([n, true]));
-          for (const [modello, senzaPensiero] of tentativi) {
-            if (sec >= 45) break; // dopo 45 secondi in tutto smetto di provare
-            const ctrl = new AbortController();
-            const stop = setTimeout(() => ctrl.abort(), 15000);
-            const gc = { responseMimeType: "application/json" };
-            if (senzaPensiero) gc.thinkingConfig = { thinkingBudget: 0 };
-            let r;
-            try {
-              r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modello}:generateContent?key=${encodeURIComponent(chiave)}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: gc }),
-                signal: ctrl.signal,
-              });
-            } catch (e) {
-              throw new Error(e.name === "AbortError" ? "nessuna risposta in 15 secondi" : "connessione fallita");
-            } finally { clearTimeout(stop); }
-            const jj = await r.json().catch(() => ({}));
-            if (r.ok) { j = jj; lsSet("ia-modello", modello); break; }
-            ultimoErrore = `${r.status}: ${(jj.error && jj.error.message) || "errore"}`;
-            if (r.status === 401 || r.status === 403) break; // chiave sbagliata: inutile riprovare. Con modello sovraccarico (503), quota (429) o non accettato provo il prossimo
-          }
+          // interrogo più modelli insieme e prendo la prima risposta valida
+          const ctrl = new AbortController();
+          const URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+          const k = encodeURIComponent(chiave);
+          j = await new Promise((resolve, reject) => {
+            const provati = new Set();
+            let attivi = 0, scoperta = false, ultimoErrore = "", chiuso = false;
+            const fine = (ok, v) => { if (chiuso) return; chiuso = true; clearTimeout(limite); ctrl.abort(); ok ? resolve(v) : reject(v); };
+            const limite = setTimeout(() => fine(false, new Error(ultimoErrore ? ultimoErrore : "nessuna risposta in 30 secondi")), 30000);
+            const controlla = () => { if (!attivi && scoperta) fine(false, new Error(ultimoErrore || "nessun modello disponibile")); };
+            async function prova(modello) {
+              if (provati.has(modello)) return;
+              provati.add(modello);
+              attivi++;
+              try {
+                for (const senza of [true, false]) {
+                  const gc = { responseMimeType: "application/json" };
+                  if (senza) gc.thinkingConfig = { thinkingBudget: 0 };
+                  const r = await fetch(`${URL_BASE}/${modello}:generateContent?key=${k}`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: gc }),
+                    signal: ctrl.signal,
+                  });
+                  const jj = await r.json().catch(() => ({}));
+                  if (r.ok) { lsSet("ia-modello", modello); fine(true, jj); return; }
+                  ultimoErrore = `${r.status}: ${(jj.error && jj.error.message) || "errore"}`;
+                  if (r.status === 401 || r.status === 403) { fine(false, new Error(ultimoErrore)); return; }
+                  if (r.status !== 400) return; // 503/429/404: passo ad altri modelli
+                }
+              } catch (e) {
+                if (!chiuso && e.name !== "AbortError") ultimoErrore = "connessione fallita";
+              } finally { attivi--; controlla(); }
+            }
+            const ultimo = lsGet("ia-modello");
+            [ultimo, "gemini-flash-latest", "gemini-2.5-flash-lite"].filter(Boolean).forEach(prova);
+            // intanto chiedo a Google quali modelli "flash" esistono oggi (i nomi cambiano spesso)
+            fetch(`${URL_BASE}?pageSize=100&key=${k}`, { signal: ctrl.signal })
+              .then((r) => r.json())
+              .then((lm) => {
+                const versione = (n) => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1]);
+                (lm.models || [])
+                  .filter((m) => /flash/.test(m.name) && (m.supportedGenerationMethods || []).includes("generateContent") && !/preview|exp|image|tts|audio|live|thinking|robotics|computer|latest/.test(m.name))
+                  .map((m) => m.name.replace(/^models\//, ""))
+                  .sort((p, q) => versione(q) - versione(p) || p.length - q.length)
+                  .slice(0, 3)
+                  .forEach(prova);
+              })
+              .catch(() => {})
+              .finally(() => { scoperta = true; controlla(); });
+          });
         } finally { clearInterval(timer); }
-        if (!j) throw new Error(ultimoErrore || "errore");
         const testo = j.candidates[0].content.parts.map((p) => p.text || "").join("");
         const d = JSON.parse(testo.replace(/^```json|```$/g, "").trim());
         lsSet(cacheKey, JSON.stringify(d));
