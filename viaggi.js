@@ -339,10 +339,18 @@
 
     // guida
     corpo.appendChild(el("h3", "", "👀 Cosa vedere e mangiare"));
-    if (g.vedere) corpo.appendChild(lista("Cosa vedere", g.vedere));
-    if (g.piatti) corpo.appendChild(lista("Piatti tipici", g.piatti));
-    if (g.vedere) corpo.appendChild(el("p", "data", "Consigli scritti a mano: controlla orari, aperture e prezzi."));
-    const box = el("div", "riassunto");
+    const vivoV = el("div", "riassunto"), vivoP = el("div", "riassunto");
+    corpo.append(vivoV, vivoP);
+    if (g.vedere || g.piatti) {
+      const det = document.createElement("details");
+      det.appendChild(el("summary", "", "Le mie note scritte a mano"));
+      if (g.vedere) det.appendChild(lista("Cosa vedere", g.vedere));
+      if (g.piatti) det.appendChild(lista("Piatti tipici", g.piatti));
+      det.appendChild(el("p", "data", "Controlla orari, aperture e prezzi."));
+      corpo.appendChild(det);
+    }
+    const boxRis = el("div", "riassunto");
+    const box = boxRis;
     const nomePulito = x.nome.replace(/ \(.*\)$/, "");
     const KEY = {
       vedere: /cosa vedere|da vedere|monument|luoghi d.interesse|attrazion|architetture|patrimonio|siti d/i,
@@ -373,7 +381,7 @@
       const p = Math.max(c.lastIndexOf(". "), c.lastIndexOf("\n"));
       return (p > max / 2 ? c.slice(0, p + 1) : c) + " …";
     }
-    async function daInternet(tipo, etichetta) {
+    async function daInternet(tipo, etichetta, box = boxRis) {
       box.textContent = "Cerco su Wikivoyage e Wikipedia…";
       try {
         let testo = "", fonte = "", titolo = nomePulito;
@@ -414,6 +422,26 @@
         box.textContent = "Non ho trovato nulla di scritto per questo posto: riprova con i tasti di ricerca qui sotto.";
       }
     }
+    async function vicini() {
+      const c = coord(x);
+      if (!c) { vivoV.textContent = ""; return; }
+      vivoV.textContent = "Cerco cosa c'è da vedere qui vicino…";
+      try {
+        const u = `https://it.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${c.lat}%7C${c.lng}&ggsradius=10000&ggslimit=15&prop=extracts%7Cpageprops&exintro=1&explaintext=1&exsentences=1&exlimit=max&format=json&origin=*`;
+        const j = await fetch(u).then((r) => r.json());
+        const pgs = Object.values((j.query && j.query.pages) || {}).filter((p) => p.extract && p.extract.length > 30);
+        pgs.sort((a, b) => (a.index || 0) - (b.index || 0));
+        if (!pgs.length) throw new Error("no");
+        vivoV.innerHTML = `<h4>Cosa vedere qui vicino</h4><ul>${pgs.slice(0, 10).map((p) => `<li><b><a href="https://it.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g, "_"))}" target="_blank" rel="noopener">${t(p.title)}</a></b>: ${t(p.extract)}</li>`).join("")}</ul><p class="data">Da Wikipedia, in tempo reale.</p>`;
+      } catch (e) {
+        vivoV.textContent = "";
+        daInternet("vedere", "Cosa vedere", vivoV);
+      }
+    }
+    vicini();
+    daInternet("piatti", "Piatti tipici", vivoP).then(() => {
+      if (/^Non ho trovato/.test(vivoP.textContent)) vivoP.textContent = "";
+    });
     const ib = el("div", "riga");
     const bv = el("button", "btn-secondario largo", "🔎 Cosa vedere (da internet)");
     bv.addEventListener("click", () => daInternet("vedere", "Cosa vedere"));
