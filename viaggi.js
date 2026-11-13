@@ -348,6 +348,7 @@
       vedere: /cosa vedere|da vedere|monument|luoghi d.interesse|attrazion|architetture|patrimonio|siti d/i,
       piatti: /a tavola|mangiare|cucina|gastronomia|prodotti tipici|piatti|enogastronom|specialit/i,
     };
+    const CUCINE = { "Toscana": "Cucina toscana", "Sicilia": "Cucina siciliana", "Calabria": "Cucina calabrese", "Campania": "Cucina campana", "Puglia": "Cucina pugliese", "Abruzzo": "Cucina abruzzese", "Marche": "Cucina marchigiana", "Umbria": "Cucina umbra", "Lazio": "Cucina laziale", "Veneto": "Cucina veneta", "Friuli": "Cucina friulana", "Lombardia": "Cucina lombarda", "Liguria": "Cucina ligure", "Piemonte": "Cucina piemontese", "Emilia": "Cucina emiliana", "Romagna": "Cucina romagnola", "Sardegna": "Cucina sarda", "Basilicata": "Cucina lucana", "Molise": "Cucina molisana", "Trentino": "Cucina trentina", "Alto Adige": "Cucina altoatesina", "Valle d'Aosta": "Cucina valdostana" };
     async function testoWiki(host) {
       const u = `https://${host}/w/api.php?action=query&prop=extracts&explaintext=1&redirects=1&format=json&origin=*&titles=${encodeURIComponent(nomePulito)}`;
       const r = await fetch(u);
@@ -375,16 +376,40 @@
     async function daInternet(tipo, etichetta) {
       box.textContent = "Cerco su Wikivoyage e Wikipedia…";
       try {
-        let testo = "", fonte = "";
+        let testo = "", fonte = "", titolo = nomePulito;
+        const fulls = {};
         for (const host of ["it.wikivoyage.org", "it.wikipedia.org"]) {
           const full = await testoWiki(host).catch(() => "");
+          fulls[host] = full;
           const sez = full ? sezione(full, KEY[tipo]) : "";
           if (sez) { testo = sez; fonte = host; break; }
         }
+        if (!testo) {
+          // 2° tentativo: i paragrafi della pagina che parlano dell'argomento
+          const RE = tipo === "piatti"
+            ? /piatti|cucina|gastronom|specialit|prodott[oi] tipic|vino|olio|dolci|ricett/i
+            : /chiesa|palazzo|museo|castello|torre|monument|santuario|abbazia|piazza|parco|spiaggia|rocca|fortezza|borgo|riserva/i;
+          for (const host of ["it.wikipedia.org", "it.wikivoyage.org"]) {
+            const full = fulls[host];
+            if (!full) continue;
+            const par = full.split(/\n+/).filter((r) => r.length > 60 && !/^=/.test(r) && RE.test(r)).slice(0, 4);
+            if (par.length) { testo = par.join("\n\n"); fonte = host; break; }
+          }
+        }
+        if (!testo && tipo === "piatti") {
+          // 3° tentativo: la cucina della regione, ricavata dalla pagina del posto
+          const pagina = (fulls["it.wikipedia.org"] || "").slice(0, 4000);
+          const reg = Object.keys(CUCINE).find((k) => new RegExp(`\\b${k}\\b`, "i").test(pagina));
+          if (reg) {
+            const cu = await fetch(`https://it.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles=${encodeURIComponent(CUCINE[reg])}`).then((r) => r.json()).catch(() => null);
+            const pg = cu && Object.values((cu.query && cu.query.pages) || {})[0];
+            if (pg && pg.extract) { testo = pg.extract; fonte = "it.wikipedia.org"; titolo = CUCINE[reg]; }
+          }
+        }
         if (!testo) throw new Error("no");
         const wv = fonte === "it.wikivoyage.org";
-        const url = `https://${fonte}/wiki/${encodeURIComponent(nomePulito.replace(/ /g, "_"))}`;
-        box.innerHTML = `<h4>${t(etichetta)}</h4><p style="white-space:pre-line">${t(taglia(testo, 1600))}</p><p><a href="${t(url)}" target="_blank" rel="noopener">Continua su ${wv ? "Wikivoyage" : "Wikipedia"} ↗</a></p>`;
+        const url = `https://${fonte}/wiki/${encodeURIComponent(titolo.replace(/ /g, "_"))}`;
+        box.innerHTML = `<h4>${t(etichetta)}${titolo !== nomePulito ? ` (${t(titolo)})` : ""}</h4><p style="white-space:pre-line">${t(taglia(testo, 1600))}</p><p><a href="${t(url)}" target="_blank" rel="noopener">Continua su ${wv ? "Wikivoyage" : "Wikipedia"} ↗</a></p>`;
       } catch (e) {
         box.textContent = "Non ho trovato nulla di scritto per questo posto: riprova con i tasti di ricerca qui sotto.";
       }
