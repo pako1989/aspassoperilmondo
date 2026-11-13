@@ -470,3 +470,5 @@ small.pagato { color: #2e9d5b; }
 .foto-lista { float: left; width: 72px; height: 72px; object-fit: cover; border-radius: 8px; margin: 0 10px 6px 0; }
 .riassunto li { overflow: hidden; margin-bottom: 8px; list-style: none; }
 .riassunto ul { padding-left: 0; }
+
+.campo-chiave input { flex: 1; min-width: 0; }
