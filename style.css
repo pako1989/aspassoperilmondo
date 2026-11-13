@@ -465,3 +465,8 @@ small.pagato { color: #2e9d5b; }
 .a-comparsa { margin: 8px 0; background: rgba(255,255,255,.06); border-radius: 12px; padding: 10px 12px; }
 .a-comparsa summary { font-weight: 600; cursor: pointer; }
 .a-comparsa .riassunto { margin-top: 8px; }
+
+.foto-guida { width: 100%; max-height: 180px; object-fit: cover; border-radius: 10px; margin-bottom: 8px; }
+.foto-lista { float: left; width: 72px; height: 72px; object-fit: cover; border-radius: 8px; margin: 0 10px 6px 0; }
+.riassunto li { overflow: hidden; margin-bottom: 8px; list-style: none; }
+.riassunto ul { padding-left: 0; }
