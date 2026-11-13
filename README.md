@@ -83,3 +83,6 @@ quindi chi lo trova può vedere quelle foto.
 Pagina statica (HTML, CSS, JavaScript) con [Leaflet](https://leafletjs.com) e mappe [OpenStreetMap](https://www.openstreetmap.org).
 È una PWA: `manifest.webmanifest` la rende installabile e `sw.js` la fa funzionare anche offline.
 Quando modifichi i file, aumenta il numero in `versione.js` e i `?v=` in `index.html`: compare in basso a sinistra nell'app e fa scaricare subito la versione nuova ai telefoni. Il tasto ⟳ in alto forza l'aggiornamento.
+
+## Posti da visitare (v19)
+I posti della lista "Da visitare" compaiono sulla mappa come segnaposto grigi (interruttore nel pannello 📒). Toccandone uno si apre la scheda: visitato, date e ricerca eventi, cosa vedere e piatti tipici (guida scritta a mano in `luoghi.js` + riassunto Wikipedia), appunti, cose da fare e dove dormire (con passaggio a "Da prenotare"). Le coordinate in `luoghi.js` sono approssimative.

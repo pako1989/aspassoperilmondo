@@ -98,6 +98,7 @@
   $("btn-elenco").addEventListener("click", () => {
     chiudi("scheda");
     chiudi("viaggi");
+    chiudi("luogo");
     $("elenco").hidden ? apri("elenco") : chiudi("elenco");
   });
 
@@ -148,6 +149,8 @@
     const scelta = b !== p;
 
     chiudi("elenco");
+    chiudi("viaggi");
+    chiudi("luogo");
     $("scheda-emoji").textContent = p.emoji || "📍";
     $("scheda-nome").textContent = p.nome;
     $("scheda-data").textContent = p.data || "";
@@ -727,7 +730,7 @@
   });
 
   // Per viaggi.js
-  window.APP = { scaricaJson: scaricaAggiunte, modificaJson, conChiave, apri, chiudi, testo };
+  window.APP = { scaricaJson: scaricaAggiunte, modificaJson, conChiave, apri, chiudi, testo, mappa };
 
   // --- Giochi ----------------------------------------------------------------
   $("btn-puzzle").addEventListener("click", () => {
