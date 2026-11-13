@@ -67,7 +67,6 @@ Aprendo una foto, **📮 Condividi** crea un'immagine a forma di cartolina (foto
 
 ### Giochi
 - **🧩 Puzzle**: parte con una foto del posto (3×3, 4×4 o 5×5), tocca due pezzi per scambiarli.
-- **🥁 Ritmo**: le note vengono ricavate dall'audio caricato (bassi a sinistra, acuti a destra): tocca la corsia quando la nota arriva sulla linea.
 
 ### Foto con album esterno
 Le foto possono restare anche in un album condiviso (Google Foto, iCloud, ecc.), non nel repo.
