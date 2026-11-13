@@ -538,7 +538,22 @@
         let j = null, ultimoErrore = "";
         try {
           // prima il modello più veloce senza "ragionamento"; se non lo accetta, provo gli altri
-          const tentativi = [["gemini-flash-latest", true], ["gemini-flash-latest", false], ["gemini-2.5-flash", true], ["gemini-2.5-flash-lite", false], ["gemini-2.0-flash", false]];
+          const tentativi = [];
+          const ultimo = lsGet("ia-modello");
+          if (ultimo) tentativi.push([ultimo, true], [ultimo, false]);
+          tentativi.push(["gemini-flash-latest", true], ["gemini-flash-latest", false]);
+          // chiedo a Google quali modelli "flash" esistono oggi (i nomi cambiano spesso)
+          try {
+            const lm = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?pageSize=100&key=${encodeURIComponent(chiave)}`).then((r) => r.json());
+            const versione = (n) => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1]);
+            (lm.models || [])
+              .filter((m) => /flash/.test(m.name) && (m.supportedGenerationMethods || []).includes("generateContent") && !/preview|exp|image|tts|audio|live|thinking|robotics|computer|latest/.test(m.name))
+              .map((m) => m.name.replace(/^models\//, ""))
+              .sort((p, q) => versione(q) - versione(p) || p.length - q.length)
+              .slice(0, 5)
+              .forEach((n) => tentativi.push([n, true], [n, false]));
+          } catch (e) { /* uso solo i nomi di ripiego */ }
+          ["gemini-2.5-flash", "gemini-2.5-flash-lite"].forEach((n) => tentativi.push([n, true]));
           for (const [modello, senzaPensiero] of tentativi) {
             const ctrl = new AbortController();
             const stop = setTimeout(() => ctrl.abort(), 90000);
@@ -556,7 +571,7 @@
               throw new Error(e.name === "AbortError" ? "nessuna risposta in 90 secondi" : "connessione fallita");
             } finally { clearTimeout(stop); }
             const jj = await r.json().catch(() => ({}));
-            if (r.ok) { j = jj; break; }
+            if (r.ok) { j = jj; lsSet("ia-modello", modello); break; }
             ultimoErrore = `${r.status}: ${(jj.error && jj.error.message) || "errore"}`;
             if (r.status === 401 || r.status === 403) break; // chiave sbagliata: inutile riprovare. Con modello sovraccarico (503), quota (429) o non accettato provo il prossimo
           }
