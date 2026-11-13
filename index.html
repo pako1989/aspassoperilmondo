@@ -19,7 +19,7 @@
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 </head>
 <body>
   <header class="barra">
@@ -113,6 +113,17 @@
     <p id="viaggi-stato" class="errore"></p>
   </section>
 
+  <!-- Scheda di un posto da visitare -->
+  <section id="luogo" class="pannello alto" hidden>
+    <div class="maniglia"></div>
+    <div class="pannello-testa">
+      <h2 id="luogo-titolo"></h2>
+      <button class="btn-chiudi" data-chiudi="luogo" aria-label="Chiudi">✕</button>
+    </div>
+    <div id="luogo-corpo"></div>
+    <p id="luogo-stato" class="errore"></p>
+  </section>
+
   <!-- Codice d'accesso per salvare -->
   <section id="chiave" class="pannello compatto" hidden>
     <div class="pannello-testa">
@@ -145,11 +156,12 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <!-- ?v=18 deve essere uguale al numero in versione.js: così il telefono scarica sempre i file nuovi -->
-  <script src="versione.js?v=18"></script>
-  <script src="posti.js?v=18"></script>
-  <script src="giochi.js?v=18"></script>
-  <script src="app.js?v=18"></script>
-  <script src="viaggi.js?v=18"></script>
+  <!-- ?v=19 deve essere uguale al numero in versione.js: così il telefono scarica sempre i file nuovi -->
+  <script src="versione.js?v=19"></script>
+  <script src="posti.js?v=19"></script>
+  <script src="giochi.js?v=19"></script>
+  <script src="luoghi.js?v=19"></script>
+  <script src="app.js?v=19"></script>
+  <script src="viaggi.js?v=19"></script>
 </body>
 </html>

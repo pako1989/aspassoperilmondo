@@ -9,6 +9,7 @@ const FILE = [
   "app.js",
   "giochi.js",
   "viaggi.js",
+  "luoghi.js",
   "posti.js",
   "versione.js",
   "manifest.webmanifest",
@@ -36,7 +37,7 @@ self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   // GitHub (tappe aggiunte) e ricerca dei posti: sempre dalla rete, mai salvati
   const host = new URL(e.request.url).hostname;
-  if (host === "api.github.com" || host === "nominatim.openstreetmap.org") return;
+  if (host === "api.github.com" || host === "nominatim.openstreetmap.org" || host === "it.wikipedia.org") return;
   // Per i nostri file salta la cache del browser (GitHub Pages la tiene 10 minuti),
   // così dopo una modifica il telefono vede subito tutto aggiornato.
   const nostro = new URL(e.request.url).origin === self.location.origin;

@@ -30,6 +30,8 @@
   function unisci(d) {
     dati = { prenotazioni: d.prenotazioni || [], daVisitare: d.daVisitare || [] };
     if (!$("viaggi").hidden && !inModifica) disegna();
+    aggiornaMappa();
+    if (!$("luogo").hidden) disegnaLuogo();
   }
   function ricarica() {
     A.scaricaJson(FILE)
@@ -37,7 +39,10 @@
       .catch(() => fetch(FILE).then((r) => (r.ok ? r.json() : {})).then(unisci).catch(() => {}));
   }
 
-  function errore(testo) { $("viaggi-stato").textContent = testo || ""; }
+  function errore(testo) {
+    $("viaggi-stato").textContent = testo || "";
+    $("luogo-stato").textContent = testo || "";
+  }
 
   // Salva su GitHub: modifica il file e ridisegna
   async function salva(messaggio, modifica) {
@@ -177,6 +182,37 @@
   }
 
   // --- Da visitare -----------------------------------------------------------
+  const LUOGHI = () => window.LUOGHI || {};
+  const coord = (x) => {
+    const g = LUOGHI()[x.nome] || {};
+    const lat = x.lat != null ? x.lat : g.lat, lng = x.lng != null ? x.lng : g.lng;
+    return lat != null && lng != null ? { lat, lng } : null;
+  };
+  async function geocoda(nome) {
+    try {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=it&q=${encodeURIComponent(nome)}`);
+      const [x] = await r.json();
+      return x ? { lat: +(+x.lat).toFixed(5), lng: +(+x.lon).toFixed(5) } : null;
+    } catch (e) { return null; }
+  }
+  const mostraSuMappa = () => { try { return localStorage.getItem("mostra-davisitare") !== "0"; } catch (e) { return true; } };
+
+  // Puntini grigi sulla mappa per i posti ancora da visitare
+  const livelloVisitare = L.layerGroup();
+  function aggiornaMappa() {
+    livelloVisitare.clearLayers();
+    if (!mostraSuMappa()) { A.mappa.removeLayer(livelloVisitare); return; }
+    dati.daVisitare.filter((x) => !x.fatto).forEach((x) => {
+      const c = coord(x);
+      if (!c) return;
+      L.marker([c.lat, c.lng], {
+        icon: L.divIcon({ className: "segnaposto segnaposto-grigio", html: "<span>🧭</span>", iconSize: [30, 30], iconAnchor: [15, 15] }),
+        title: x.nome
+      }).on("click", () => apriLuogo(x.id)).addTo(livelloVisitare);
+    });
+    livelloVisitare.addTo(A.mappa);
+  }
+
   function elencoDaVisitare() {
     const corpo = $("viaggi-corpo");
     const riga = el("div", "riga");
@@ -185,26 +221,207 @@
     const aggiungi = () => {
       const nome = $("dv-nome").value.trim();
       if (!nome) return;
-      conChiave(() => salva(`Da visitare: ${nome}`, (d) => d.daVisitare.push({ id: nuovoId(), nome, fatto: false })));
+      conChiave(async () => {
+        errore("Cerco il posto sulla mappa…");
+        const c = await geocoda(nome);
+        salva(`Da visitare: ${nome}`, (d) => d.daVisitare.push({ id: nuovoId(), nome, fatto: false, ...(c || {}) }));
+      });
     };
     $("dv-aggiungi").addEventListener("click", aggiungi);
     $("dv-nome").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggiungi(); } });
 
+    const mappaRiga = el("label", "spunta", `<input type="checkbox" ${mostraSuMappa() ? "checked" : ""}> <span>Mostra sulla mappa i posti da visitare</span>`);
+    mappaRiga.style.margin = "8px 0";
+    mappaRiga.querySelector("input").addEventListener("change", (e) => {
+      try { localStorage.setItem("mostra-davisitare", e.target.checked ? "1" : "0"); } catch (err) { /* ok */ }
+      aggiornaMappa();
+    });
+    corpo.appendChild(mappaRiga);
+
     const ordinati = [...dati.daVisitare].sort((a, b) => Number(!!a.fatto) - Number(!!b.fatto));
     const fatti = ordinati.filter((x) => x.fatto).length;
-    corpo.appendChild(el("p", "riepilogo", `${dati.daVisitare.length - fatti} da visitare · ${fatti} visitati`));
+    corpo.appendChild(el("p", "riepilogo", `${dati.daVisitare.length - fatti} da visitare · ${fatti} visitati · tocca un nome per la scheda`));
     ordinati.forEach((x) => {
       const r = el("div", "voce visita" + (x.fatto ? " fatto" : ""));
-      r.innerHTML = `<label class="spunta"><input type="checkbox" ${x.fatto ? "checked" : ""}> <span>${t(x.nome)}</span></label><button class="btn-chiudi" aria-label="Elimina">✕</button>`;
+      r.innerHTML = `<input type="checkbox" class="cb" aria-label="Visitato" ${x.fatto ? "checked" : ""}><span class="nome-luogo">${t(x.nome)}${coord(x) ? "" : " <small>(senza posizione)</small>"}</span><button class="btn-chiudi" aria-label="Elimina">✕</button>`;
       r.querySelector("input").addEventListener("change", () => conChiave(() => salva(`${x.fatto ? "Da rivisitare" : "Visitato"}: ${x.nome}`, (d) => {
         const y = d.daVisitare.find((z) => z.id === x.id);
         if (y) y.fatto = !y.fatto;
       })));
+      r.querySelector(".nome-luogo").addEventListener("click", () => apriLuogo(x.id));
       r.querySelector("button").addEventListener("click", () => {
         if (confirm(`Togliere ${x.nome} dalla lista?`)) conChiave(() => salva(`Tolto: ${x.nome}`, (d) => { d.daVisitare = d.daVisitare.filter((z) => z.id !== x.id); }));
       });
       corpo.appendChild(r);
     });
+  }
+
+  // --- Scheda di un posto da visitare -----------------------------------------
+  let luogoId = null;
+  const cerca = (q) => "https://www.google.com/search?q=" + encodeURIComponent(q);
+  function link(testo, url) {
+    const a = el("a", "btn-secondario largo", testo);
+    a.href = url; a.target = "_blank"; a.rel = "noopener";
+    a.style.display = "block"; a.style.textAlign = "center"; a.style.textDecoration = "none";
+    return a;
+  }
+  const modificaLuogo = (msg, fn) => conChiave(() => salva(msg, (d) => {
+    const y = d.daVisitare.find((z) => z.id === luogoId);
+    if (y) fn(y);
+  }));
+
+  function apriLuogo(id) {
+    luogoId = id;
+    A.chiudi("elenco"); A.chiudi("scheda"); A.chiudi("viaggi");
+    errore("");
+    disegnaLuogo();
+    A.apri("luogo");
+    $("luogo").scrollTop = 0;
+  }
+
+  function lista(titolo, voci) {
+    const box = el("div", "guida");
+    box.appendChild(el("h3", "", titolo));
+    const ul = el("ul");
+    voci.forEach((v) => ul.appendChild(el("li", "", t(v))));
+    box.appendChild(ul);
+    return box;
+  }
+
+  function disegnaLuogo() {
+    const x = dati.daVisitare.find((y) => y.id === luogoId);
+    if (!x) { A.chiudi("luogo"); return; }
+    const scorrimento = $("luogo").scrollTop;
+    const g = LUOGHI()[x.nome] || {};
+    const c = coord(x);
+    $("luogo-titolo").textContent = (x.fatto ? "✅ " : "🧭 ") + x.nome;
+    const corpo = $("luogo-corpo");
+    corpo.innerHTML = "";
+
+    // azioni
+    const az = el("div", "riga");
+    const vis = el("button", "btn-secondario largo", x.fatto ? "↩ Da rivisitare" : "✅ Visitato");
+    vis.addEventListener("click", () => modificaLuogo(`${x.fatto ? "Da rivisitare" : "Visitato"}: ${x.nome}`, (y) => { y.fatto = !y.fatto; }));
+    az.appendChild(vis);
+    const mp = el("button", "btn-secondario largo", c ? "🗺 Sulla mappa" : "📍 Trova sulla mappa");
+    mp.addEventListener("click", () => {
+      if (c) {
+        A.chiudi("luogo");
+        A.mappa.flyTo([c.lat, c.lng], 11, { duration: 1.2 });
+      } else {
+        conChiave(async () => {
+          errore("Cerco il posto sulla mappa…");
+          const r = await geocoda(x.nome);
+          if (!r) { errore("Non lo trovo: prova a scrivere il nome con la regione (es. Gubbio Umbria)."); return; }
+          salva(`Posizione: ${x.nome}`, (d) => { const y = d.daVisitare.find((z) => z.id === x.id); if (y) Object.assign(y, r); });
+        });
+      }
+    });
+    az.appendChild(mp);
+    corpo.appendChild(az);
+
+    // quando + eventi
+    corpo.appendChild(el("h3", "", "📅 Quando e eventi"));
+    const qd = el("div", "riga");
+    qd.innerHTML = `<label class="campo">Dal<input id="lg-dal" type="date" value="${t(x.dal || "")}"></label><label class="campo">Al<input id="lg-al" type="date" value="${t(x.al || "")}"></label>`;
+    corpo.appendChild(qd);
+    const rd = el("div", "riga");
+    const salvaD = el("button", "btn-secondario largo", "Salva date");
+    salvaD.addEventListener("click", () => modificaLuogo(`Date: ${x.nome}`, (y) => { y.dal = $("lg-dal").value; y.al = $("lg-al").value; }));
+    const ev = el("button", "btn-secondario largo", "🎉 Eventi in quelle date");
+    ev.addEventListener("click", () => {
+      const dal = $("lg-dal").value, al = $("lg-al").value;
+      const quando = dal && al ? ` dal ${giorno(dal)} al ${giorno(al, true)}` : dal ? ` il ${giorno(dal, true)}` : "";
+      window.open(cerca(`eventi sagre concerti a ${x.nome}${quando}`), "_blank", "noopener");
+    });
+    rd.append(salvaD, ev);
+    corpo.appendChild(rd);
+
+    // guida
+    corpo.appendChild(el("h3", "", "👀 Cosa vedere e mangiare"));
+    if (g.vedere) corpo.appendChild(lista("Cosa vedere", g.vedere));
+    if (g.piatti) corpo.appendChild(lista("Piatti tipici", g.piatti));
+    if (g.vedere) corpo.appendChild(el("p", "data", "Consigli scritti a mano: controlla orari, aperture e prezzi."));
+    const box = el("div", "riassunto");
+    corpo.appendChild(box);
+    const rs = el("button", "btn-secondario largo", "📖 Riassunto da Wikipedia");
+    rs.addEventListener("click", async () => {
+      box.textContent = "Cerco…";
+      try {
+        const r = await fetch(`https://it.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(x.nome.replace(/ \(.*\)$/, ""))}?redirect=true`);
+        const j = r.ok ? await r.json() : null;
+        if (!j || j.type === "disambiguation" || !j.extract) throw new Error("no");
+        box.innerHTML = `<p>${t(j.extract)}</p>${j.content_urls ? `<p><a href="${t(j.content_urls.desktop.page)}" target="_blank" rel="noopener">Leggi su Wikipedia ↗</a></p>` : ""}`;
+      } catch (e) {
+        box.textContent = "Nessun riassunto trovato: usa i tasti qui sotto per cercare online.";
+      }
+    });
+    corpo.appendChild(rs);
+    const cl = el("div", "riga");
+    cl.append(link("Cosa vedere ↗", cerca(`cosa vedere a ${x.nome}`)), link("Piatti tipici ↗", cerca(`piatti tipici ${x.nome} cosa mangiare`)));
+    corpo.appendChild(cl);
+    corpo.appendChild(link("Guida di viaggio (Wikivoyage) ↗", `https://it.wikivoyage.org/wiki/${encodeURIComponent(x.nome.replace(/ \(.*\)$/, "").replace(/ /g, "_"))}`));
+
+    // appunti
+    corpo.appendChild(el("h3", "", "📝 Appunti"));
+    const ta = el("textarea");
+    ta.id = "lg-appunti"; ta.rows = 4; ta.placeholder = "Scrivi qui cosa vi interessa, orari, idee…"; ta.value = x.appunti || "";
+    corpo.appendChild(ta);
+    const sa = el("button", "btn-secondario largo", "Salva appunti");
+    sa.addEventListener("click", () => modificaLuogo(`Appunti: ${x.nome}`, (y) => { y.appunti = ta.value.trim(); }));
+    corpo.appendChild(sa);
+
+    // cose da fare
+    corpo.appendChild(el("h3", "", "✅ Cose da fare"));
+    (x.cose || []).forEach((k) => {
+      const r = el("div", "voce visita" + (k.fatto ? " fatto" : ""));
+      r.innerHTML = `<input type="checkbox" class="cb" ${k.fatto ? "checked" : ""}><span class="nome-luogo">${t(k.testo)}</span><button class="btn-chiudi" aria-label="Elimina">✕</button>`;
+      r.querySelector("input").addEventListener("change", () => modificaLuogo(`Cosa da fare: ${k.testo}`, (y) => { const q = (y.cose || []).find((z) => z.id === k.id); if (q) q.fatto = !q.fatto; }));
+      r.querySelector("button").addEventListener("click", () => modificaLuogo(`Tolta: ${k.testo}`, (y) => { y.cose = (y.cose || []).filter((z) => z.id !== k.id); }));
+      corpo.appendChild(r);
+    });
+    const nc = el("div", "riga");
+    nc.innerHTML = `<input id="lg-cosa" type="text" placeholder="Es. centro storico" autocomplete="off"><button class="btn-primario stretto">+</button>`;
+    const aggCosa = () => {
+      const tx = nc.querySelector("input").value.trim();
+      if (tx) modificaLuogo(`Cosa da fare: ${tx}`, (y) => { (y.cose = y.cose || []).push({ id: nuovoId(), testo: tx, fatto: false }); });
+    };
+    nc.querySelector("button").addEventListener("click", aggCosa);
+    nc.querySelector("input").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); aggCosa(); } });
+    corpo.appendChild(nc);
+
+    // dove dormire
+    corpo.appendChild(el("h3", "", "🛏 Dove dormire"));
+    (x.dormire || []).forEach((h) => {
+      const r = el("div", "voce");
+      r.style.cursor = "default";
+      r.innerHTML = `<span class="voce-testo"><b>${t(h.nome)}</b>${h.link ? `<small><a href="${t(h.link)}" target="_blank" rel="noopener">Apri il link ↗</a></small>` : ""}</span><span class="voce-lato">${h.prezzo ? `<b>${euro(h.prezzo)}</b>` : ""}</span>`;
+      corpo.appendChild(r);
+      const rb = el("div", "riga");
+      const pren = el("button", "btn-secondario largo", "Da prenotare →");
+      pren.addEventListener("click", () => conChiave(() => salva(`Da prenotare: ${h.nome}`, (d) => {
+        d.prenotazioni.push({ id: nuovoId(), stato: "daprenotare", tipo: "Hotel", nome: `${h.nome} (${x.nome})`, dal: x.dal || "", al: x.al || "", prezzo: h.prezzo || "", pagato: false, scadenza: "", link: h.link || "", note: "" });
+        const y = d.daVisitare.find((z) => z.id === x.id);
+        if (y) y.dormire = (y.dormire || []).filter((z) => z.id !== h.id);
+      })));
+      const tg = el("button", "btn-secondario", "✕");
+      tg.addEventListener("click", () => modificaLuogo(`Tolto: ${h.nome}`, (y) => { y.dormire = (y.dormire || []).filter((z) => z.id !== h.id); }));
+      rb.append(pren, tg);
+      corpo.appendChild(rb);
+    });
+    const nd = el("div", "modulo");
+    nd.innerHTML = `<input id="lg-hn" type="text" placeholder="Nome (es. Agriturismo Le Querce)" autocomplete="off"><div class="riga"><input id="lg-hp" type="number" inputmode="decimal" step="0.01" min="0" placeholder="Prezzo €"><input id="lg-hl" type="url" placeholder="Link"></div>`;
+    corpo.appendChild(nd);
+    const adb = el("button", "btn-secondario largo", "+ Aggiungi alloggio");
+    adb.addEventListener("click", () => {
+      const nome = $("lg-hn").value.trim();
+      if (!nome) { errore("Scrivi il nome dell'alloggio."); return; }
+      const h = { id: nuovoId(), nome, prezzo: $("lg-hp").value ? Number($("lg-hp").value) : "", link: $("lg-hl").value.trim() };
+      modificaLuogo(`Alloggio: ${nome}`, (y) => { (y.dormire = y.dormire || []).push(h); });
+    });
+    corpo.appendChild(adb);
+
+    $("luogo").scrollTop = scorrimento;
   }
 
   function disegna() {
@@ -222,6 +439,7 @@
   $("btn-viaggi").addEventListener("click", () => {
     A.chiudi("elenco");
     A.chiudi("scheda");
+    A.chiudi("luogo");
     if (!$("viaggi").hidden) { A.chiudi("viaggi"); return; }
     inModifica = null;
     errore("");
@@ -232,4 +450,5 @@
 
   ricarica();
   window.VIAGGI = { ricarica };
+  aggiornaMappa();
 })();

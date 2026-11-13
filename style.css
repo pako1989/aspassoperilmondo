@@ -434,3 +434,30 @@ small.pagato { color: #2e9d5b; }
 
 .comandi-musica { margin-top: 10px; }
 .comandi-musica .riga { margin: 8px 0 0; }
+
+/* Posti da visitare: puntini grigi e scheda */
+.segnaposto-grigio { border-color: #9aa3ad; filter: grayscale(0.7); opacity: 0.9; font-size: 15px; }
+.voce.visita .cb { width: 22px; height: 22px; flex: none; }
+.nome-luogo { flex: 1; cursor: pointer; font-size: 1.02rem; }
+.nome-luogo small { color: var(--tenue); }
+.guida ul { margin: 4px 0 10px; padding-left: 20px; }
+.guida h3 { margin: 12px 0 4px; font-size: 0.9rem; }
+.guida li { margin: 3px 0; }
+.riassunto { margin: 8px 0; color: var(--testo); font-size: 0.95rem; }
+.riassunto p { margin: 6px 0; }
+.campo { display: flex; flex-direction: column; gap: 4px; flex: 1; font-size: 0.8rem; color: var(--tenue); min-width: 0; }
+#luogo textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--testo);
+  font: inherit;
+  font-size: 16px;
+  resize: vertical;
+  margin-bottom: 8px;
+}
+#luogo .riga { margin: 8px 0; }
+#luogo .btn-secondario.largo { margin-top: 4px; }
+#luogo .modulo { margin: 8px 0; }
