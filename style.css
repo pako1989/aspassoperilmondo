@@ -461,3 +461,7 @@ small.pagato { color: #2e9d5b; }
 #luogo .riga { margin: 8px 0; }
 #luogo .btn-secondario.largo { margin-top: 4px; }
 #luogo .modulo { margin: 8px 0; }
+
+.a-comparsa { margin: 8px 0; background: rgba(255,255,255,.06); border-radius: 12px; padding: 10px 12px; }
+.a-comparsa summary { font-weight: 600; cursor: pointer; }
+.a-comparsa .riassunto { margin-top: 8px; }

@@ -340,15 +340,6 @@
     // guida
     corpo.appendChild(el("h3", "", "👀 Cosa vedere e mangiare"));
     const vivoV = el("div", "riassunto"), vivoP = el("div", "riassunto");
-    corpo.append(vivoV, vivoP);
-    if (g.vedere || g.piatti) {
-      const det = document.createElement("details");
-      det.appendChild(el("summary", "", "Le mie note scritte a mano"));
-      if (g.vedere) det.appendChild(lista("Cosa vedere", g.vedere));
-      if (g.piatti) det.appendChild(lista("Piatti tipici", g.piatti));
-      det.appendChild(el("p", "data", "Controlla orari, aperture e prezzi."));
-      corpo.appendChild(det);
-    }
     const boxRis = el("div", "riassunto");
     const box = boxRis;
     const nomePulito = x.nome.replace(/ \(.*\)$/, "");
@@ -442,13 +433,6 @@
     daInternet("piatti", "Piatti tipici", vivoP).then(() => {
       if (/^Non ho trovato/.test(vivoP.textContent)) vivoP.textContent = "";
     });
-    const ib = el("div", "riga");
-    const bv = el("button", "btn-secondario largo", "🔎 Cosa vedere (da internet)");
-    bv.addEventListener("click", () => daInternet("vedere", "Cosa vedere"));
-    const bp = el("button", "btn-secondario largo", "🍝 Piatti tipici (da internet)");
-    bp.addEventListener("click", () => daInternet("piatti", "Piatti tipici"));
-    ib.append(bv, bp);
-    corpo.appendChild(ib);
     const rs = el("button", "btn-secondario largo", "📖 Riassunto da Wikipedia");
     rs.addEventListener("click", async () => {
       box.textContent = "Cerco…";
@@ -462,11 +446,18 @@
       }
     });
     corpo.appendChild(rs);
-    corpo.appendChild(box);
     const cl = el("div", "riga");
     cl.append(link("Cosa vedere ↗", cerca(`cosa vedere a ${x.nome}`)), link("Piatti tipici ↗", cerca(`piatti tipici ${x.nome} cosa mangiare`)));
     corpo.appendChild(cl);
     corpo.appendChild(link("Guida di viaggio (Wikivoyage) ↗", `https://it.wikivoyage.org/wiki/${encodeURIComponent(nomePulito.replace(/ /g, "_"))}`));
+    corpo.appendChild(box);
+    [["🔎 Cosa vedere", vivoV], ["🍝 Cosa mangiare", vivoP]].forEach(([tit, cont]) => {
+      const d = document.createElement("details");
+      d.className = "a-comparsa";
+      d.appendChild(el("summary", "", tit));
+      d.appendChild(cont);
+      corpo.appendChild(d);
+    });
 
     // appunti
     corpo.appendChild(el("h3", "", "📝 Appunti"));
