@@ -348,12 +348,15 @@
       piatti: /a tavola|mangiare|cucina|gastronomia|prodotti tipici|piatti|enogastronom|specialit/i,
     };
     const CUCINE = { "Toscana": "Cucina toscana", "Sicilia": "Cucina siciliana", "Calabria": "Cucina calabrese", "Campania": "Cucina campana", "Puglia": "Cucina pugliese", "Abruzzo": "Cucina abruzzese", "Marche": "Cucina marchigiana", "Umbria": "Cucina umbra", "Lazio": "Cucina laziale", "Veneto": "Cucina veneta", "Friuli": "Cucina friulana", "Lombardia": "Cucina lombarda", "Liguria": "Cucina ligure", "Piemonte": "Cucina piemontese", "Emilia": "Cucina emiliana", "Romagna": "Cucina romagnola", "Sardegna": "Cucina sarda", "Basilicata": "Cucina lucana", "Molise": "Cucina molisana", "Trentino": "Cucina trentina", "Alto Adige": "Cucina altoatesina", "Valle d'Aosta": "Cucina valdostana" };
+    const imgDi = {};
+    const imgHtml = (u, cls) => (u ? `<img class="${cls}" src="${t(u)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : "");
     async function testoWiki(host) {
-      const u = `https://${host}/w/api.php?action=query&prop=extracts&explaintext=1&redirects=1&format=json&origin=*&titles=${encodeURIComponent(nomePulito)}`;
+      const u = `https://${host}/w/api.php?action=query&prop=extracts%7Cpageimages&pithumbsize=400&explaintext=1&redirects=1&format=json&origin=*&titles=${encodeURIComponent(nomePulito)}`;
       const r = await fetch(u);
       if (!r.ok) return "";
       const j = await r.json();
       const p = Object.values((j.query && j.query.pages) || {})[0];
+      if (p && p.thumbnail) imgDi[host] = p.thumbnail.source;
       return p && p.extract ? p.extract : "";
     }
     function sezione(testo, re) {
@@ -400,15 +403,15 @@
           const pagina = (fulls["it.wikipedia.org"] || "").slice(0, 4000);
           const reg = Object.keys(CUCINE).find((k) => new RegExp(`\\b${k}\\b`, "i").test(pagina));
           if (reg) {
-            const cu = await fetch(`https://it.wikipedia.org/w/api.php?action=query&prop=extracts&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles=${encodeURIComponent(CUCINE[reg])}`).then((r) => r.json()).catch(() => null);
+            const cu = await fetch(`https://it.wikipedia.org/w/api.php?action=query&prop=extracts%7Cpageimages&pithumbsize=400&exintro=1&explaintext=1&redirects=1&format=json&origin=*&titles=${encodeURIComponent(CUCINE[reg])}`).then((r) => r.json()).catch(() => null);
             const pg = cu && Object.values((cu.query && cu.query.pages) || {})[0];
-            if (pg && pg.extract) { testo = pg.extract; fonte = "it.wikipedia.org"; titolo = CUCINE[reg]; }
+            if (pg && pg.extract) { testo = pg.extract; fonte = "it.wikipedia.org"; titolo = CUCINE[reg]; imgDi["it.wikipedia.org"] = pg.thumbnail ? pg.thumbnail.source : ""; }
           }
         }
         if (!testo) throw new Error("no");
         const wv = fonte === "it.wikivoyage.org";
         const url = `https://${fonte}/wiki/${encodeURIComponent(titolo.replace(/ /g, "_"))}`;
-        box.innerHTML = `<h4>${t(etichetta)}${titolo !== nomePulito ? ` (${t(titolo)})` : ""}</h4><p style="white-space:pre-line">${t(taglia(testo, 1600))}</p><p><a href="${t(url)}" target="_blank" rel="noopener">Continua su ${wv ? "Wikivoyage" : "Wikipedia"} ↗</a></p>`;
+        box.innerHTML = `${imgHtml(imgDi[fonte], "foto-guida")}<h4>${t(etichetta)}${titolo !== nomePulito ? ` (${t(titolo)})` : ""}</h4><p style="white-space:pre-line">${t(taglia(testo, 1600))}</p><p><a href="${t(url)}" target="_blank" rel="noopener">Continua su ${wv ? "Wikivoyage" : "Wikipedia"} ↗</a></p>`;
       } catch (e) {
         box.textContent = "Non ho trovato nulla di scritto per questo posto: riprova con i tasti di ricerca qui sotto.";
       }
@@ -418,12 +421,12 @@
       if (!c) { vivoV.textContent = ""; return; }
       vivoV.textContent = "Cerco cosa c'è da vedere qui vicino…";
       try {
-        const u = `https://it.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${c.lat}%7C${c.lng}&ggsradius=10000&ggslimit=15&prop=extracts%7Cpageprops&exintro=1&explaintext=1&exsentences=1&exlimit=max&format=json&origin=*`;
+        const u = `https://it.wikipedia.org/w/api.php?action=query&generator=geosearch&ggscoord=${c.lat}%7C${c.lng}&ggsradius=10000&ggslimit=15&prop=extracts%7Cpageimages&pithumbsize=200&exintro=1&explaintext=1&exsentences=1&exlimit=max&format=json&origin=*`;
         const j = await fetch(u).then((r) => r.json());
         const pgs = Object.values((j.query && j.query.pages) || {}).filter((p) => p.extract && p.extract.length > 30);
         pgs.sort((a, b) => (a.index || 0) - (b.index || 0));
         if (!pgs.length) throw new Error("no");
-        vivoV.innerHTML = `<h4>Cosa vedere qui vicino</h4><ul>${pgs.slice(0, 10).map((p) => `<li><b><a href="https://it.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g, "_"))}" target="_blank" rel="noopener">${t(p.title)}</a></b>: ${t(p.extract)}</li>`).join("")}</ul><p class="data">Da Wikipedia, in tempo reale.</p>`;
+        vivoV.innerHTML = `<h4>Cosa vedere qui vicino</h4><ul>${pgs.slice(0, 10).map((p) => `<li>${imgHtml(p.thumbnail && p.thumbnail.source, "foto-lista")}<b><a href="https://it.wikipedia.org/wiki/${encodeURIComponent(p.title.replace(/ /g, "_"))}" target="_blank" rel="noopener">${t(p.title)}</a></b>: ${t(p.extract)}</li>`).join("")}</ul><p class="data">Da Wikipedia, in tempo reale.</p>`;
       } catch (e) {
         vivoV.textContent = "";
         daInternet("vedere", "Cosa vedere", vivoV);
