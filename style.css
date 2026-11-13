@@ -472,3 +472,6 @@ small.pagato { color: #2e9d5b; }
 .riassunto ul { padding-left: 0; }
 
 .campo-chiave input { flex: 1; min-width: 0; }
+
+.giro { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #ffd23f; border-radius: 50%; animation: giro .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
+@keyframes giro { to { transform: rotate(360deg); } }

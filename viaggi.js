@@ -376,7 +376,7 @@
       return (p > max / 2 ? c.slice(0, p + 1) : c) + " …";
     }
     async function daInternet(tipo, etichetta, box = boxRis) {
-      box.textContent = "Cerco su Wikivoyage e Wikipedia…";
+      box.innerHTML = `<span class="giro"></span> Cerco su Wikivoyage e Wikipedia…`;
       try {
         let testo = "", fonte = "", titolo = nomePulito;
         const fulls = {};
@@ -430,7 +430,7 @@
     async function vicini() {
       const c = coord(x);
       if (!c) { vivoV.textContent = ""; return; }
-      vivoV.textContent = "Cerco cosa c'è da vedere qui vicino…";
+      vivoV.innerHTML = `<span class="giro"></span> Cerco cosa c'è da vedere qui vicino…`;
       try {
         const API = "https://it.wikipedia.org/w/api.php?format=json&origin=*&action=query";
         const chiaveOtm = (() => { try { return localStorage.getItem("chiave-otm") || ""; } catch (e) { return ""; } })();
@@ -530,18 +530,18 @@
       if (!forza) {
         try { const c = JSON.parse(lsGet(cacheKey) || "null"); if (c && c.vedere) { iaDisegna(c, true); return; } } catch (e) {}
       }
-      iaBox.textContent = "Chiedo all'IA…";
+      iaBox.innerHTML = `<span class="giro"></span> Chiedo all'IA…`;
       try {
         const prompt = `Sono in vacanza a ${x.nome} (Italia). Dammi in italiano i luoghi più importanti da visitare lì e nei dintorni e i piatti tipici da mangiare. Rispondi SOLO con JSON: {"vedere":[{"nome":"...","descrizione":"una frase"}],"piatti":[{"nome":"...","descrizione":"una frase"}]} con 6 luoghi e 5 piatti.`;
         let sec = 0;
-        const timer = setInterval(() => { sec++; iaBox.textContent = `Chiedo all'IA… ${sec}s`; }, 1000);
+        const timer = setInterval(() => { sec++; iaBox.innerHTML = `<span class="giro"></span> Chiedo all'IA… ${sec}s`; }, 1000);
         let j = null, ultimoErrore = "";
         try {
           // prima il modello più veloce senza "ragionamento"; se non lo accetta, provo gli altri
           const tentativi = [["gemini-flash-latest", true], ["gemini-flash-latest", false], ["gemini-2.5-flash", true], ["gemini-2.5-flash-lite", false], ["gemini-2.0-flash", false]];
           for (const [modello, senzaPensiero] of tentativi) {
             const ctrl = new AbortController();
-            const stop = setTimeout(() => ctrl.abort(), 40000);
+            const stop = setTimeout(() => ctrl.abort(), 90000);
             const gc = { responseMimeType: "application/json" };
             if (senzaPensiero) gc.thinkingConfig = { thinkingBudget: 0 };
             let r;
@@ -553,7 +553,7 @@
                 signal: ctrl.signal,
               });
             } catch (e) {
-              throw new Error(e.name === "AbortError" ? "nessuna risposta in 40 secondi" : "connessione fallita");
+              throw new Error(e.name === "AbortError" ? "nessuna risposta in 90 secondi" : "connessione fallita");
             } finally { clearTimeout(stop); }
             const jj = await r.json().catch(() => ({}));
             if (r.ok) { j = jj; break; }
