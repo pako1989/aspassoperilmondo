@@ -219,14 +219,8 @@
       });
       $("scheda-musica").appendChild(blocco);
     }
-    const fileAudio = audioDi(b);
     $("btn-puzzle").disabled = !tutteFoto(b).length;
-    $("btn-ritmo").disabled = !fileAudio;
-    $("giochi-info").textContent =
-      !tutteFoto(b).length && !fileAudio ? "Carica una foto per il puzzle e un audio per il ritmo."
-      : !tutteFoto(b).length ? "Carica una foto per giocare al puzzle."
-      : !fileAudio ? "Carica un file audio per giocare al ritmo."
-      : "";
+    $("giochi-info").textContent = tutteFoto(b).length ? "" : "Carica una foto per giocare al puzzle.";
     apri("scheda");
     $("scheda").scrollTop = scorrimento;
 
@@ -741,10 +735,6 @@
     const lista = tutteFoto(p);
     const src = lista[Math.floor(Math.random() * lista.length)];
     window.GIOCHI.puzzle(src, p.nome, RAW);
-  });
-  $("btn-ritmo").addEventListener("click", () => {
-    const p = corrente();
-    window.GIOCHI.ritmo(audioDi(p), (p.audioAggiunto && p.audioAggiunto.titolo) || (p.musica && p.musica.titolo) || p.nome, RAW);
   });
 
   // --- Foto a schermo intero ----------------------------------------------
