@@ -522,6 +522,23 @@
       const nuova = el("button", "btn-secondario", "Rifai la domanda");
       nuova.addEventListener("click", () => iaChiedi(true));
       iaBox.appendChild(nuova);
+      // foto vere da Wikipedia, cercate per nome (non generate dall'IA)
+      const liste = iaBox.querySelectorAll("ul");
+      [[liste[0], d.vedere, true], [liste[1], d.piatti, false]].forEach(([ul, arr, conPosto]) => {
+        if (!ul || !arr) return;
+        [...ul.children].forEach((li, i) => {
+          const nome = arr[i] && arr[i].nome;
+          if (!nome) return;
+          const q = conPosto ? `${nome} ${nomePulito}` : nome;
+          fetch(`https://it.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrlimit=1&gsrsearch=${encodeURIComponent(q)}&prop=pageimages&pithumbsize=200`)
+            .then((r) => r.json())
+            .then((j) => {
+              const p = Object.values((j.query && j.query.pages) || {})[0];
+              if (p && p.thumbnail && li.isConnected) li.insertAdjacentHTML("afterbegin", imgHtml(p.thumbnail.source, "foto-lista"));
+            })
+            .catch(() => {});
+        });
+      });
     }
     async function iaChiedi(forza) {
       const chiave = lsGet("chiave-gemini");
