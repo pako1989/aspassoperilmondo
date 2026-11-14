@@ -187,6 +187,13 @@
       "lng": 10.60365,
       "dal": "2026-12-05",
       "al": "2026-12-08"
+    },
+    {
+      "id": "mwgqdkm6rw9",
+      "nome": "Lago di Bracciano",
+      "fatto": false,
+      "lat": 42.12106,
+      "lng": 12.23027
     }
   ]
 }
