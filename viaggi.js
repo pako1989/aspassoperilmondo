@@ -206,9 +206,9 @@
       const c = coord(x);
       if (!c) return;
       L.marker([c.lat, c.lng], {
-        icon: L.divIcon({ className: "segnaposto segnaposto-grigio", html: "<span>🧭</span>", iconSize: [30, 30], iconAnchor: [15, 15] }),
+        icon: L.divIcon({ className: "segnaposto segnaposto-grigio", html: `<span>🧭</span><b class="nome-segnaposto">${A.testo(x.nome)}</b>`, iconSize: [30, 30], iconAnchor: [15, 15] }),
         title: x.nome
-      }).on("click", () => apriLuogo(x.id)).addTo(livelloVisitare);
+      }).on("click", () => (A.misuraAperta() ? A.scegliPerMisura("v:" + x.id) : apriLuogo(x.id))).addTo(livelloVisitare);
     });
     livelloVisitare.addTo(A.mappa);
   }
@@ -275,6 +275,7 @@
     A.chiudi("elenco"); A.chiudi("scheda"); A.chiudi("viaggi");
     errore("");
     disegnaLuogo();
+    A.chiudi("misura");
     A.apri("luogo");
     $("luogo").scrollTop = 0;
   }
@@ -713,11 +714,16 @@
     inModifica = null;
     errore("");
     disegna();
+    A.chiudi("misura");
     A.apri("viaggi");
     ricarica();
   });
 
   ricarica();
-  window.VIAGGI = { ricarica };
+  // Per il 📏: i posti da visitare che hanno una posizione sulla mappa
+  const luoghiSuMappa = () =>
+    dati.daVisitare.filter((x) => !x.fatto).map((x) => ({ ...coord(x), id: String(x.id), nome: x.nome })).filter((x) => x.lat != null);
+  const luogoSuMappa = (id) => luoghiSuMappa().find((x) => x.id === String(id)) || null;
+  window.VIAGGI = { ricarica, luoghiSuMappa, luogoSuMappa };
   aggiornaMappa();
 })();

@@ -15,13 +15,13 @@
   const segnaposti = posti.map((posto, i) => {
     const icona = L.divIcon({
       className: "segnaposto",
-      html: `<span>${posto.emoji || "📍"}</span>`,
+      html: `<span>${posto.emoji || "📍"}</span><b class="nome-segnaposto">${testo(posto.nome)}</b>`,
       iconSize: [36, 36],
       iconAnchor: [18, 18]
     });
     return L.marker([posto.lat, posto.lng], { icon: icona, title: posto.nome })
       .addTo(mappa)
-      .on("click", () => apriScheda(i));
+      .on("click", () => toccaPosto(i, -1));
   });
 
   // Tappe: puntini piccoli, visibili solo quando la mappa è abbastanza vicina
@@ -31,13 +31,13 @@
   function disegnaTappe() {
     livelloTappe.clearLayers();
     segnapostiTappe = posti.map((posto, i) =>
-      (posto.tappe || []).map((t) =>
+      (posto.tappe || []).map((t, k) =>
         L.marker([t.lat, t.lng], {
-          icon: L.divIcon({ className: "segnaposto-tappa", iconSize: [16, 16], iconAnchor: [8, 8] }),
+          icon: L.divIcon({ className: "segnaposto-tappa", html: `<b class="nome-segnaposto">${testo(t.nome)}</b>`, iconSize: [16, 16], iconAnchor: [8, 8] }),
           title: t.nome
         })
           .bindTooltip(t.nome, { direction: "top", offset: [0, -8] })
-          .on("click", () => apriScheda(i))
+          .on("click", () => toccaPosto(i, k))
           .addTo(livelloTappe)
       )
     );
@@ -48,6 +48,14 @@
     else livelloTappe.remove();
   }
   mappa.on("zoomend", aggiornaTappe);
+
+  // Nomi scritti sotto i segnaposti: i posti da zoom 8, le tappe da zoom 10
+  function aggiornaNomi() {
+    const z = mappa.getZoom();
+    mappa.getContainer().classList.toggle("nomi-posti", z >= 8);
+    mappa.getContainer().classList.toggle("nomi-tappe", z >= 10);
+  }
+  mappa.on("zoomend", aggiornaNomi);
 
   // All'apertura inquadra il gruppo principale di posti; quelli molto lontani
   // (es. Siviglia) si raggiungono dall'elenco, così su telefono le icone non si sovrappongono.
@@ -63,12 +71,14 @@
   }
   inquadraTutti();
   aggiornaTappe();
+  aggiornaNomi();
 
   // --- Pannelli ------------------------------------------------------------
   function apri(id) { $(id).hidden = false; }
   function chiudi(id) {
     $(id).hidden = true;
     if (id === "scheda") $("scheda-musica").innerHTML = ""; // ferma la musica
+    if (id === "misura") puliscMisura();
   }
   document.querySelectorAll("[data-chiudi]").forEach((btn) =>
     btn.addEventListener("click", () => chiudi(btn.dataset.chiudi))
@@ -99,7 +109,177 @@
     chiudi("scheda");
     chiudi("viaggi");
     chiudi("luogo");
+    chiudi("misura");
     $("elenco").hidden ? apri("elenco") : chiudi("elenco");
+  });
+
+  // --- Distanza tra due posti ----------------------------------------------
+  // Tasto 📏: scegli due posti (o tappe) dai menu o toccandoli sulla mappa.
+  // Mostra la distanza in linea d'aria con una linea tratteggiata e, se c'è
+  // rete, anche strada e tempo in auto (servizio gratuito OSRM, senza chiave).
+  const misura = { scelti: [null, null], linee: L.layerGroup(), richiesta: 0 };
+  const chiaveMisura = (i, k) => (k >= 0 ? `${i}-${k}` : `${i}`);
+  function puntoMisura(v) {
+    if (!v) return null;
+    if (v.startsWith("v:")) {
+      const x = window.VIAGGI && window.VIAGGI.luogoSuMappa(v.slice(2));
+      return x ? { nome: x.nome, breve: x.nome, emoji: "🧭", lat: +x.lat, lng: +x.lng } : null;
+    }
+    const [i, k] = v.split("-").map(Number);
+    const p = posti[i];
+    if (!p) return null;
+    const t = k >= 0 && p.tappe ? p.tappe[k] : null;
+    if (k >= 0 && !t) return null;
+    const x = t || p;
+    return { nome: t ? `${t.nome} (${p.nome})` : p.nome, breve: x.nome, emoji: p.emoji || "📍", lat: +x.lat, lng: +x.lng };
+  }
+  function opzioniMisura(sel) {
+    const valore = sel.value;
+    sel.innerHTML = '<option value="">— scegli —</option>';
+    posti
+      .map((p, i) => ({ p, i }))
+      .sort((a, b) => a.p.nome.localeCompare(b.p.nome, "it"))
+      .forEach(({ p, i }) => {
+        const gruppo = document.createElement("optgroup");
+        gruppo.label = `${p.emoji || "📍"} ${p.nome}`;
+        const o = new Option(p.nome, chiaveMisura(i, -1));
+        gruppo.appendChild(o);
+        (p.tappe || []).forEach((t, k) => gruppo.appendChild(new Option(`↳ ${t.nome}`, chiaveMisura(i, k))));
+        sel.appendChild(gruppo);
+      });
+    const daVisitare = (window.VIAGGI && window.VIAGGI.luoghiSuMappa()) || [];
+    if (daVisitare.length) {
+      const gruppo = document.createElement("optgroup");
+      gruppo.label = "🧭 Da visitare";
+      daVisitare
+        .sort((a, b) => a.nome.localeCompare(b.nome, "it"))
+        .forEach((x) => gruppo.appendChild(new Option(x.nome, "v:" + x.id)));
+      sel.appendChild(gruppo);
+    }
+    sel.value = valore;
+  }
+  function apriMisura(daQui) {
+    ["scheda", "elenco", "viaggi", "luogo", "nuova-tappa"].forEach(chiudi);
+    opzioniMisura($("mi-da"));
+    opzioniMisura($("mi-a"));
+    misura.scelti = [$("mi-da").value || null, $("mi-a").value || null];
+    if (daQui) {
+      misura.scelti = [daQui, null];
+      $("mi-da").value = daQui;
+      $("mi-a").value = "";
+    }
+    apri("misura");
+    calcolaMisura();
+  }
+  function puliscMisura() {
+    misura.richiesta++;
+    misura.linee.clearLayers();
+    misura.linee.remove();
+  }
+  // Tocco su un segnaposto: se il pannello 📏 è aperto sceglie il posto, altrimenti apre la scheda
+  function toccaPosto(i, k) {
+    if ($("misura").hidden) return apriScheda(i);
+    scegliPerMisura(chiaveMisura(i, k));
+  }
+  function scegliPerMisura(v) {
+    // primo tocco → "Da", secondo → "A", terzo → ricomincia da capo
+    if (!misura.scelti[0]) misura.scelti[0] = v;
+    else if (!misura.scelti[1]) misura.scelti[1] = v;
+    else misura.scelti = [v, null];
+    $("mi-da").value = misura.scelti[0] || "";
+    $("mi-a").value = misura.scelti[1] || "";
+    calcolaMisura(true);
+  }
+  ["mi-da", "mi-a"].forEach((id, n) =>
+    $(id).addEventListener("change", () => {
+      misura.scelti[n] = $(id).value || null;
+      calcolaMisura();
+    })
+  );
+  $("mi-scambia").addEventListener("click", () => {
+    misura.scelti.reverse();
+    $("mi-da").value = misura.scelti[0] || "";
+    $("mi-a").value = misura.scelti[1] || "";
+    calcolaMisura();
+  });
+  function km(metri) {
+    const v = metri / 1000;
+    return v < 10 ? `${v.toLocaleString("it-IT", { maximumFractionDigits: 1 })} km` : `${Math.round(v).toLocaleString("it-IT")} km`;
+  }
+  function durata(secondi) {
+    const min = Math.round(secondi / 60);
+    if (min < 60) return `${min} min`;
+    const h = Math.floor(min / 60), m = min % 60;
+    return m ? `${h} h ${m} min` : `${h} h`;
+  }
+  // Spazio da lasciare in basso perché il pannello non copra la linea (su telefono)
+  function margineMisura() {
+    const largo = window.innerWidth >= 760;
+    return {
+      paddingTopLeft: [40, 100],
+      paddingBottomRight: [largo ? $("misura").offsetWidth + 50 : 40, largo ? 40 : $("misura").offsetHeight + 30]
+    };
+  }
+  async function calcolaMisura(daMappa) {
+    const id = ++misura.richiesta;
+    misura.linee.clearLayers();
+    const a = puntoMisura(misura.scelti[0]);
+    const b = puntoMisura(misura.scelti[1]);
+    const ris = $("mi-risultato");
+    if (!a || !b) {
+      ris.innerHTML = `<p class="data">${a || b ? "Ora scegli l'altro posto" : "Scegli due posti"}: dai menu qui sopra oppure toccandoli sulla mappa.</p>`;
+      misura.linee.addTo(mappa);
+      const uno = a || b;
+      if (uno) L.circleMarker([uno.lat, uno.lng], { radius: 22, color: "#1e5a96", weight: 3, fill: false }).addTo(misura.linee);
+      return;
+    }
+    if (misura.scelti[0] === misura.scelti[1]) {
+      ris.innerHTML = '<p class="data">Hai scelto lo stesso posto due volte 🙂</p>';
+      return;
+    }
+    const A = L.latLng(a.lat, a.lng), B = L.latLng(b.lat, b.lng);
+    const metri = A.distanceTo(B);
+    misura.linee.addTo(mappa);
+    [A, B].forEach((ll) => L.circleMarker(ll, { radius: 22, color: "#1e5a96", weight: 3, fill: false }).addTo(misura.linee));
+    L.polyline([A, B], { color: "#f08c6e", weight: 4, dashArray: "8 10", interactive: false }).addTo(misura.linee);
+    L.tooltip({ permanent: true, direction: "center", className: "etichetta-misura" })
+      .setLatLng(L.latLngBounds(A, B).getCenter())
+      .setContent(`✈️ ${km(metri)}`)
+      .addTo(misura.linee);
+    const gm = `https://www.google.com/maps/dir/?api=1&origin=${a.lat},${a.lng}&destination=${b.lat},${b.lng}&travelmode=driving`;
+    ris.innerHTML = `
+      <p class="mi-tratta">${a.emoji} <b>${testo(a.breve)}</b> → ${b.emoji} <b>${testo(b.breve)}</b></p>
+      <p class="mi-valore">✈️ In linea d'aria: <b>${km(metri)}</b></p>
+      <p class="mi-valore" id="mi-auto">🚗 In auto: <span class="rotella-mini"></span> calcolo…</p>
+      <a class="btn-secondario largo mi-link" href="${gm}" target="_blank" rel="noopener">🧭 Apri il percorso in Google Maps</a>`;
+    if (!daMappa || !mappa.getBounds().contains(A) || !mappa.getBounds().contains(B)) {
+      mappa.flyToBounds(L.latLngBounds(A, B), { ...margineMisura(), maxZoom: 13, duration: 1 });
+    }
+
+    // Strada e tempo in auto
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+      const url = `https://router.project-osrm.org/route/v1/driving/${a.lng},${a.lat};${b.lng},${b.lat}?overview=simplified&geometries=geojson`;
+      const r = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      const dati = await r.json();
+      if (id !== misura.richiesta) return;
+      const strada = dati.routes && dati.routes[0];
+      if (dati.code !== "Ok" || !strada) throw new Error(dati.code || "nessun percorso");
+      $("mi-auto").innerHTML = `🚗 In auto: <b>${km(strada.distance)}</b> · circa <b>${durata(strada.duration)}</b>`;
+      L.polyline(strada.geometry.coordinates.map(([lng, lat]) => [lat, lng]), {
+        color: "#1e5a96", weight: 5, opacity: 0.7, interactive: false
+      }).addTo(misura.linee);
+    } catch (e) {
+      if (id !== misura.richiesta) return;
+      $("mi-auto").innerHTML = '🚗 In auto: <span class="data">non disponibile ora (serve la rete, o non c\'è una strada)</span>';
+    }
+  }
+  $("btn-misura").addEventListener("click", () => ($("misura").hidden ? apriMisura() : chiudi("misura")));
+  $("btn-misura-qui").addEventListener("click", () => {
+    const v = chiaveMisura(postoAperto, tappaScelta);
+    apriMisura(v);
   });
 
   // --- Scheda del posto ----------------------------------------------------
@@ -151,6 +331,7 @@
     chiudi("elenco");
     chiudi("viaggi");
     chiudi("luogo");
+    chiudi("misura");
     $("scheda-emoji").textContent = p.emoji || "📍";
     $("scheda-nome").textContent = p.nome;
     $("scheda-data").textContent = p.data || "";
@@ -730,7 +911,8 @@
   });
 
   // Per viaggi.js
-  window.APP = { scaricaJson: scaricaAggiunte, modificaJson, conChiave, apri, chiudi, testo, mappa };
+  window.APP = { scaricaJson: scaricaAggiunte, modificaJson, conChiave, apri, chiudi, testo, mappa,
+    misuraAperta: () => !$("misura").hidden, scegliPerMisura };
 
   // --- Giochi ----------------------------------------------------------------
   $("btn-puzzle").addEventListener("click", () => {

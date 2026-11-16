@@ -475,3 +475,85 @@ small.pagato { color: #2e9d5b; }
 
 .giro { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #ffd23f; border-radius: 50%; animation: giro .8s linear infinite; vertical-align: -2px; margin-right: 6px; }
 @keyframes giro { to { transform: rotate(360deg); } }
+
+/* Distanza tra due posti */
+.mi-scelte {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "da scambia" "a scambia";
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0 4px;
+}
+.mi-scelte label:first-child { grid-area: da; }
+.mi-scelte label:last-child { grid-area: a; }
+#mi-scambia { grid-area: scambia; align-self: stretch; font-size: 1.2rem; }
+.mi-scelte label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--tenue);
+  min-width: 0;
+}
+.mi-scelte select {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--testo);
+  font-size: 16px; /* evita lo zoom automatico su iPhone */
+}
+.mi-scelte select option, .mi-scelte select optgroup { color: #1d2430; background: #fff; }
+#mi-risultato p { margin: 8px 0; }
+.mi-tratta { font-size: 0.95rem; }
+.mi-valore { font-size: 1.05rem; }
+.mi-link { display: block; text-align: center; text-decoration: none; margin-top: 10px; }
+#btn-misura-qui { margin-top: 10px; }
+.etichetta-misura {
+  background: #fff;
+  color: #1d2430;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: 2px solid #f08c6e;
+  border-radius: 10px;
+  padding: 3px 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+.etichetta-misura::before { display: none; }
+.rotella-mini {
+  display: inline-block;
+  width: 14px; height: 14px;
+  vertical-align: -2px;
+  border: 2px solid rgba(127, 127, 127, 0.35);
+  border-top-color: #1e5a96;
+  border-radius: 50%;
+  animation: gira 0.8s linear infinite;
+}
+/* Su telefoni stretti la barra ha 5 tasti: un po' più compatta */
+@media (max-width: 430px) {
+  .barra { padding-left: 12px; padding-right: 12px; }
+  .barra h1 { font-size: 1rem; }
+  .azioni { gap: 6px; }
+  .btn-tondo { width: 36px; height: 36px; font-size: 1rem; }
+}
+
+/* Nomi sotto i segnaposti (compaiono quando la mappa è abbastanza vicina) */
+.nome-segnaposto {
+  display: none;
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font: 700 12px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #1d2430;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 2px #fff;
+  pointer-events: none;
+}
+.segnaposto-tappa .nome-segnaposto { font-size: 11px; font-weight: 600; top: calc(100% + 2px); }
+.nomi-posti .segnaposto .nome-segnaposto,
+.nomi-tappe .segnaposto-tappa .nome-segnaposto { display: block; }
+.segnaposto-grigio .nome-segnaposto { color: #4a525c; }
