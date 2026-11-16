@@ -326,6 +326,16 @@
     const qd = el("div", "riga");
     qd.innerHTML = `<label class="campo">Dal<input id="lg-dal" type="date" value="${t(x.dal || "")}"></label><label class="campo">Al<input id="lg-al" type="date" value="${t(x.al || "")}"></label>`;
     corpo.appendChild(qd);
+    // le ultime date scritte valgono per tutti i posti (salvate solo su questo telefono)
+    const dateComuni = () => { try { return JSON.parse(localStorage.getItem("date-eventi") || "{}"); } catch (e) { return {}; } };
+    if (!x.dal && !x.al) {
+      const dc = dateComuni();
+      if (dc.dal) $("lg-dal").value = dc.dal;
+      if (dc.al) $("lg-al").value = dc.al;
+    }
+    qd.querySelectorAll("input").forEach((i) => i.addEventListener("change", () => {
+      try { localStorage.setItem("date-eventi", JSON.stringify({ dal: $("lg-dal").value, al: $("lg-al").value })); } catch (e) {}
+    }));
     const rd = el("div", "riga");
     const salvaD = el("button", "btn-secondario largo", "Salva date");
     salvaD.addEventListener("click", () => modificaLuogo(`Date: ${x.nome}`, (y) => { y.dal = $("lg-dal").value; y.al = $("lg-al").value; }));
@@ -541,6 +551,72 @@
         });
       });
     }
+    // chiede a Gemini e restituisce il testo della risposta;
+    // prova più modelli insieme e prende la prima risposta valida
+    async function gemini(chiave, prompt, json, dove) {
+      let sec = 0;
+      dove.innerHTML = `<span class="giro"></span> Chiedo all'IA…`;
+      const timer = setInterval(() => { sec++; dove.innerHTML = `<span class="giro"></span> Chiedo all'IA… ${sec}s`; }, 1000);
+      try {
+        const ctrl = new AbortController();
+        const URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+        const k = encodeURIComponent(chiave);
+        const j = await new Promise((resolve, reject) => {
+          const provati = new Set();
+          let attivi = 0, scoperta = false, ultimoErrore = "", chiuso = false;
+          const fine = (ok, v) => { if (chiuso) return; chiuso = true; clearTimeout(limite); ctrl.abort(); ok ? resolve(v) : reject(v); };
+          const limite = setTimeout(() => fine(false, new Error(ultimoErrore ? ultimoErrore : "nessuna risposta in 30 secondi")), 30000);
+          const controlla = () => { if (!attivi && scoperta) fine(false, new Error(ultimoErrore || "nessun modello disponibile")); };
+          async function prova(modello) {
+            if (provati.has(modello)) return;
+            provati.add(modello);
+            attivi++;
+            try {
+              for (const senza of [true, false]) {
+                const gc = json ? { responseMimeType: "application/json" } : {};
+                if (senza) gc.thinkingConfig = { thinkingBudget: 0 };
+                const r = await fetch(`${URL_BASE}/${modello}:generateContent?key=${k}`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: gc }),
+                  signal: ctrl.signal,
+                });
+                const jj = await r.json().catch(() => ({}));
+                if (r.ok) { lsSet("ia-modello", modello); fine(true, jj); return; }
+                ultimoErrore = `${r.status}: ${(jj.error && jj.error.message) || "errore"}`;
+                if (r.status === 401 || r.status === 403) { fine(false, new Error(ultimoErrore)); return; }
+                if (r.status !== 400) return; // 503/429/404: passo ad altri modelli
+              }
+            } catch (e) {
+              if (!chiuso && e.name !== "AbortError") ultimoErrore = "connessione fallita";
+            } finally { attivi--; controlla(); }
+          }
+          const ultimo = lsGet("ia-modello");
+          [ultimo, "gemini-flash-latest", "gemini-2.5-flash-lite"].filter(Boolean).forEach(prova);
+          // intanto chiedo a Google quali modelli "flash" esistono oggi (i nomi cambiano spesso)
+          fetch(`${URL_BASE}?pageSize=100&key=${k}`, { signal: ctrl.signal })
+            .then((r) => r.json())
+            .then((lm) => {
+              const versione = (n) => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1]);
+              (lm.models || [])
+                .filter((m) => /flash/.test(m.name) && (m.supportedGenerationMethods || []).includes("generateContent") && !/preview|exp|image|tts|audio|live|thinking|robotics|computer|latest/.test(m.name))
+                .map((m) => m.name.replace(/^models\//, ""))
+                .sort((p, q) => versione(q) - versione(p) || p.length - q.length)
+                .slice(0, 3)
+                .forEach(prova);
+            })
+            .catch(() => {})
+            .finally(() => { scoperta = true; controlla(); });
+        });
+        return j.candidates[0].content.parts.map((p) => p.text || "").join("");
+      } finally { clearInterval(timer); }
+    }
+    function iaErrore(dove, e) {
+      dove.innerHTML = `<p class="errore">L'IA non ha risposto (${t(String(e.message || e).slice(0, 200))}). Controlla la chiave o riprova tra poco.</p>`;
+      const cambia = el("button", "btn-secondario", "Cambia chiave");
+      cambia.addEventListener("click", iaChiave);
+      dove.appendChild(cambia);
+    }
     async function iaChiedi(forza) {
       const chiave = lsGet("chiave-gemini");
       if (!chiave) { iaChiave(); return; }
@@ -548,74 +624,14 @@
       if (!forza) {
         try { const c = JSON.parse(lsGet(cacheKey) || "null"); if (c && c.vedere) { iaDisegna(c, true); return; } } catch (e) {}
       }
-      iaBox.innerHTML = `<span class="giro"></span> Chiedo all'IA…`;
       try {
         const prompt = `Sono in vacanza a ${x.nome} (Italia). Dammi in italiano i luoghi più importanti da visitare lì e nei dintorni e i piatti tipici da mangiare. Rispondi SOLO con JSON: {"vedere":[{"nome":"...","descrizione":"una frase"}],"piatti":[{"nome":"...","descrizione":"una frase"}]} con 6 luoghi e 5 piatti.`;
-        let sec = 0;
-        const timer = setInterval(() => { sec++; iaBox.innerHTML = `<span class="giro"></span> Chiedo all'IA… ${sec}s`; }, 1000);
-        let j = null;
-        try {
-          // interrogo più modelli insieme e prendo la prima risposta valida
-          const ctrl = new AbortController();
-          const URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
-          const k = encodeURIComponent(chiave);
-          j = await new Promise((resolve, reject) => {
-            const provati = new Set();
-            let attivi = 0, scoperta = false, ultimoErrore = "", chiuso = false;
-            const fine = (ok, v) => { if (chiuso) return; chiuso = true; clearTimeout(limite); ctrl.abort(); ok ? resolve(v) : reject(v); };
-            const limite = setTimeout(() => fine(false, new Error(ultimoErrore ? ultimoErrore : "nessuna risposta in 30 secondi")), 30000);
-            const controlla = () => { if (!attivi && scoperta) fine(false, new Error(ultimoErrore || "nessun modello disponibile")); };
-            async function prova(modello) {
-              if (provati.has(modello)) return;
-              provati.add(modello);
-              attivi++;
-              try {
-                for (const senza of [true, false]) {
-                  const gc = { responseMimeType: "application/json" };
-                  if (senza) gc.thinkingConfig = { thinkingBudget: 0 };
-                  const r = await fetch(`${URL_BASE}/${modello}:generateContent?key=${k}`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: gc }),
-                    signal: ctrl.signal,
-                  });
-                  const jj = await r.json().catch(() => ({}));
-                  if (r.ok) { lsSet("ia-modello", modello); fine(true, jj); return; }
-                  ultimoErrore = `${r.status}: ${(jj.error && jj.error.message) || "errore"}`;
-                  if (r.status === 401 || r.status === 403) { fine(false, new Error(ultimoErrore)); return; }
-                  if (r.status !== 400) return; // 503/429/404: passo ad altri modelli
-                }
-              } catch (e) {
-                if (!chiuso && e.name !== "AbortError") ultimoErrore = "connessione fallita";
-              } finally { attivi--; controlla(); }
-            }
-            const ultimo = lsGet("ia-modello");
-            [ultimo, "gemini-flash-latest", "gemini-2.5-flash-lite"].filter(Boolean).forEach(prova);
-            // intanto chiedo a Google quali modelli "flash" esistono oggi (i nomi cambiano spesso)
-            fetch(`${URL_BASE}?pageSize=100&key=${k}`, { signal: ctrl.signal })
-              .then((r) => r.json())
-              .then((lm) => {
-                const versione = (n) => parseFloat((n.match(/gemini-(\d+(?:\.\d+)?)/) || [0, 0])[1]);
-                (lm.models || [])
-                  .filter((m) => /flash/.test(m.name) && (m.supportedGenerationMethods || []).includes("generateContent") && !/preview|exp|image|tts|audio|live|thinking|robotics|computer|latest/.test(m.name))
-                  .map((m) => m.name.replace(/^models\//, ""))
-                  .sort((p, q) => versione(q) - versione(p) || p.length - q.length)
-                  .slice(0, 3)
-                  .forEach(prova);
-              })
-              .catch(() => {})
-              .finally(() => { scoperta = true; controlla(); });
-          });
-        } finally { clearInterval(timer); }
-        const testo = j.candidates[0].content.parts.map((p) => p.text || "").join("");
+        const testo = await gemini(chiave, prompt, true, iaBox);
         const d = JSON.parse(testo.replace(/^```json|```$/g, "").trim());
         lsSet(cacheKey, JSON.stringify(d));
         iaDisegna(d, false);
       } catch (e) {
-        iaBox.innerHTML = `<p class="errore">L'IA non ha risposto (${t(String(e.message || e).slice(0, 200))}). Controlla la chiave o riprova tra poco.</p>`;
-        const cambia = el("button", "btn-secondario", "Cambia chiave");
-        cambia.addEventListener("click", iaChiave);
-        iaBox.appendChild(cambia);
+        iaErrore(iaBox, e);
       }
     }
     function iaChiave() {
@@ -631,6 +647,95 @@
     iaBtn.addEventListener("click", () => { ia.open = true; iaChiedi(false); });
     corpo.insertBefore(iaBtn, ia);
     if (lsGet("chiave-gemini") && lsGet(`ia-${nomePulito}`)) { ia.open = true; iaChiedi(false); }
+
+    // altre domande all'IA: tasti pronti + domanda libera
+    const dm = document.createElement("details");
+    dm.className = "a-comparsa";
+    dm.appendChild(el("summary", "", "💬 Fai un'altra domanda all'IA"));
+    const dmTasti = el("div", "domande-ia");
+    const dmForm = el("div", "riga");
+    dmForm.innerHTML = `<input type="text" placeholder="Scrivi una domanda su ${t(x.nome)}…" enterkeyhint="send"><button class="btn-secondario stretto">Chiedi</button>`;
+    const dmRisp = el("div", "riassunto");
+    dm.append(dmTasti, dmForm, dmRisp);
+    corpo.appendChild(dm);
+    const DOMANDE = [
+      ["🎉 Eventi e feste", () => {
+        const dal = $("lg-dal").value, al = $("lg-al").value;
+        const quando = dal && al ? `dal ${giorno(dal)} al ${giorno(al, true)}` : dal ? `il ${giorno(dal, true)}` : "";
+        return quando
+          ? `Quali eventi, feste, sagre, concerti o mercatini ci sono ${quando}, lì e nei dintorni? Indica se sono ricorrenti ogni anno o se la data va verificata.`
+          : "Quali eventi, feste, sagre e tradizioni ci sono durante l'anno, e in che periodo?";
+      }],
+      ["📜 Storia e curiosità", "Raccontami la storia e qualche curiosità poco conosciuta."],
+      ["🧭 Consigli pratici", "Dammi consigli pratici: come arrivare, dove parcheggiare, come muoversi, quanto tempo serve per visitarlo."],
+      ["🛏️ Dove dormire", "In che zone conviene dormire e che tipo di alloggi ci sono (agriturismi, B&B, hotel)? Non inventare nomi di strutture."],
+      ["☀️ Periodo migliore", "Qual è il periodo migliore per andarci, che clima c'è nei vari mesi e cosa portare?"],
+      ["💑 Per una coppia", "Cosa fare di romantico o speciale per una coppia, anche al tramonto o di sera?"],
+      ["🚗 Gite nei dintorni", "Quali gite di mezza giornata o di un giorno si possono fare nei dintorni?"],
+    ];
+    const dmCache = `ia-domande-${nomePulito}`;
+    const md = (s) => {
+      // trasforma il testo dell'IA (markdown semplice) in HTML sicuro
+      const inl = (r) => t(r).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/(^|[^*])\*([^*\s][^*]*?)\*/g, "$1<i>$2</i>");
+      let h = "", lista = false;
+      s.split(/\n/).forEach((riga) => {
+        const r = riga.trim();
+        const v = r.match(/^(?:[-*•]|\d+[.)])\s+(.*)/);
+        if (v) { if (!lista) { h += "<ul class=\"puntini\">"; lista = true; } h += `<li>${inl(v[1])}</li>`; return; }
+        if (lista) { h += "</ul>"; lista = false; }
+        if (!r) return;
+        const tit = r.match(/^#{1,6}\s+(.*)/);
+        h += tit ? `<h4>${inl(tit[1])}</h4>` : `<p>${inl(r)}</p>`;
+      });
+      return h + (lista ? "</ul>" : "");
+    };
+    function dmMostra(elenco) {
+      dmRisp.innerHTML = "";
+      elenco.forEach((c, i) => {
+        const b = el("div", "risposta-ia");
+        b.innerHTML = `<p class="domanda-ia">❓ ${t(c.d)}</p>${md(c.r)}`;
+        if (i === 0) b.insertAdjacentHTML("beforeend", `<p class="data">Scritto da un'IA: può sbagliare, controlla date e orari.</p>`);
+        dmRisp.appendChild(b);
+      });
+      if (elenco.length) {
+        const via = el("button", "btn-secondario", "Cancella le risposte");
+        via.addEventListener("click", () => { lsSet(dmCache, "[]"); dmMostra([]); });
+        dmRisp.appendChild(via);
+      }
+    }
+    const dmElenco = () => { try { return JSON.parse(lsGet(dmCache) || "[]"); } catch (e) { return []; } };
+    async function dmChiedi(domanda) {
+      domanda = (domanda || "").trim();
+      if (!domanda) return;
+      dm.open = true;
+      const chiave = lsGet("chiave-gemini");
+      if (!chiave) { ia.open = true; iaChiave(); dmRisp.innerHTML = `<p class="data">Prima salva la chiave Gemini qui sopra, poi rifai la domanda.</p>`; return; }
+      const attesa = el("div", "risposta-ia");
+      dmRisp.prepend(attesa);
+      dmTasti.querySelectorAll("button").forEach((b) => (b.disabled = true));
+      dmForm.querySelector("button").disabled = true;
+      try {
+        const prompt = `Sono in vacanza in Italia con mia moglie e ci interessa ${x.nome}. Rispondi in italiano, in modo concreto e conciso (massimo 200 parole), usando elenchi puntati se servono. Se non sei sicuro di un'informazione dillo. Domanda: ${domanda}`;
+        const r = await gemini(chiave, prompt, false, attesa);
+        const elenco = [{ d: domanda, r: r.trim() }, ...dmElenco()].slice(0, 8);
+        lsSet(dmCache, JSON.stringify(elenco));
+        dmMostra(elenco);
+        dmForm.querySelector("input").value = "";
+      } catch (e) {
+        iaErrore(attesa, e);
+      } finally {
+        dmTasti.querySelectorAll("button").forEach((b) => (b.disabled = false));
+        dmForm.querySelector("button").disabled = false;
+      }
+    }
+    DOMANDE.forEach(([nome, testo]) => {
+      const b = el("button", "chip-ia", nome);
+      b.addEventListener("click", () => dmChiedi(typeof testo === "function" ? testo() : testo));
+      dmTasti.appendChild(b);
+    });
+    dmForm.querySelector("button").addEventListener("click", () => dmChiedi(dmForm.querySelector("input").value));
+    dmForm.querySelector("input").addEventListener("keydown", (e) => { if (e.key === "Enter") dmChiedi(e.target.value); });
+    dmMostra(dmElenco());
 
     // appunti
     corpo.appendChild(el("h3", "", "📝 Appunti"));

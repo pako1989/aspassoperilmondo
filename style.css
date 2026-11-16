@@ -557,3 +557,12 @@ small.pagato { color: #2e9d5b; }
 .nomi-posti .segnaposto .nome-segnaposto,
 .nomi-tappe .segnaposto-tappa .nome-segnaposto { display: block; }
 .segnaposto-grigio .nome-segnaposto { color: #4a525c; }
+/* altre domande all'IA */
+.domande-ia { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.chip-ia { border: 1px solid rgba(255,210,63,.5); background: rgba(255,210,63,.1); color: inherit; border-radius: 999px; padding: 6px 10px; font: inherit; font-size: 0.85rem; cursor: pointer; }
+.chip-ia:disabled { opacity: .5; }
+.risposta-ia { border-top: 1px solid rgba(255,255,255,.12); padding-top: 8px; margin-top: 8px; }
+.risposta-ia:first-child { border-top: 0; margin-top: 0; padding-top: 0; }
+.domanda-ia { font-weight: 600; }
+.riassunto ul.puntini { padding-left: 18px; }
+.riassunto ul.puntini li { list-style: disc; overflow: visible; margin-bottom: 4px; }
