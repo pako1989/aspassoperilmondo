@@ -228,7 +228,9 @@
       "nome": "Bolgheri",
       "fatto": false,
       "lat": 43.23401,
-      "lng": 10.61793
+      "lng": 10.61793,
+      "dal": "",
+      "al": ""
     },
     {
       "id": "mwo02lsj9qp",
