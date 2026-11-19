@@ -237,7 +237,9 @@
       "nome": "Castagneto Carducci",
       "fatto": false,
       "lat": 43.16074,
-      "lng": 10.61101
+      "lng": 10.61101,
+      "dal": "2026-12-05",
+      "al": "2026-12-08"
     }
   ]
 }
