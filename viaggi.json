@@ -12,6 +12,19 @@
       "scadenza": "2026-11-20",
       "link": "https://www.booking.com/Share-eqjHGu",
       "note": "colazione inclusa"
+    },
+    {
+      "id": "mwo04vlzalg",
+      "stato": "prenotato",
+      "tipo": "Agriturismo",
+      "nome": "Villa Toscana",
+      "dal": "2026-12-05",
+      "al": "2026-12-08",
+      "prezzo": 380,
+      "pagato": false,
+      "scadenza": "2026-11-25",
+      "link": "",
+      "note": "colazione inclusa"
     }
   ],
   "daVisitare": [
