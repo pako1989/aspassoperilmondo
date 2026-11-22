@@ -182,7 +182,7 @@
     {
       "id": "mwfl4pnq3v7",
       "nome": "Campiglia Marittima",
-      "fatto": false,
+      "fatto": true,
       "lat": 43.04017,
       "lng": 10.60365,
       "dal": "2026-12-05",
