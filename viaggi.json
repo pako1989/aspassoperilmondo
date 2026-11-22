@@ -61,7 +61,7 @@
     {
       "id": "v07",
       "nome": "Castiglione della Pescaia",
-      "fatto": false,
+      "fatto": true,
       "appunti": "test"
     },
     {
